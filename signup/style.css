@@ -1,0 +1,360 @@
+body {
+  margin: 0;
+  color: #f9f9f9;
+  background: #2b2a2f;
+  font-family: "Euclid Circular B", "Poppins", sans-serif;
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.page {
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+.page.signup-9 {
+  background: #c7e7ff;
+  color: #332e2e;
+  font-family: "Euclid Circular B", "Poppins", sans-serif;
+  --color-border: rgb(0 0 0 / 16%);
+}
+
+.signup-9-card {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 30px;
+  box-shadow: 0 20px 40px -10px rgb(0 0 0 / 10%);
+  padding: 8px;
+  width: clamp(300px, 85vw, 500px);
+}
+
+.signup-9-hero,
+.signup-9-form {
+  flex: 1 1 50%;
+}
+
+.signup-9-card :is(h3, p) {
+  font-weight: 500;
+  margin: 0;
+}
+
+.signup-9-hero {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  min-height: 200px;
+  background: radial-gradient(
+    ellipse at center,
+    #eaf5fd 0%,
+    #cfe7fa 45%,
+    #55acee 100%
+  );
+}
+
+.signup-9-form {
+  padding: 30px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.signup-9-form > img,
+.signup-9-form > .signup-9-logo {
+  height: 26px;
+  margin-bottom: 12px;
+}
+
+.signup-9-form > h3 {
+  text-align: center;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.signup-9 :is(button, input) {
+  height: 52px;
+  border-radius: 14px;
+  background: #efefef;
+  color: inherit;
+  font-family: inherit;
+  font-size: 16px;
+  width: 100%;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease,
+    transform 0.15s ease, opacity 0.25s ease;
+}
+
+.signup-9 button {
+  cursor: pointer;
+}
+
+.signup-9 input:not([type="checkbox"]) {
+  border: 2px solid transparent;
+  padding: 0 14px;
+}
+
+.signup-9 input:not([type="checkbox"]):hover {
+  background: #e6e6e6;
+}
+
+.signup-9 input:not([type="checkbox"]):focus {
+  outline: none;
+  background: #ffffff;
+  border-color: #55acee;
+  box-shadow: 0 0 0 4px rgb(85 172 238 / 20%);
+}
+
+.signup-9 input::placeholder {
+  color: #9e9e9e;
+  transition: color 0.25s ease;
+}
+
+.signup-9 input:focus::placeholder {
+  color: #b8b8b8;
+}
+
+.signup-9-socials {
+  display: flex;
+  gap: 8px;
+}
+
+.signup-9-extra-text {
+  display: none;
+}
+
+.signup-9-social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  background: #c0c0c0;
+  font-size: 15px;
+}
+
+.signup-9-social-btn:hover {
+  background: #cccccc;
+}
+
+.signup-9-social-btn:active {
+  background: #b3b3b3;
+}
+
+.signup-9-social-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgb(85 172 238 / 25%);
+}
+
+.signup-9-social-btn > img {
+  height: 24px;
+}
+
+.signup-9-social-btn:first-child > img {
+  height: 20px;
+}
+
+.signup-9-social-btn > p {
+  color: #5c5c5c;
+}
+
+.signup-9-form > button[type="submit"] {
+  color: #f9f9f9;
+  font-weight: 500;
+  border: 0;
+  background: #332e2e;
+  font-size: 17px;
+}
+
+.signup-9-form > button[type="submit"]:hover {
+  background: #464040;
+}
+
+.signup-9-form > button[type="submit"]:active {
+  background: #241f1f;
+}
+
+.signup-9-form > button[type="submit"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgb(85 172 238 / 30%);
+}
+
+.signup-9-or {
+  position: relative;
+  text-align: center;
+  height: 24px;
+  font-weight: 500;
+  opacity: 0.5;
+}
+
+.signup-9-or::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  translate: 0 -50%;
+  height: 1px;
+  background: rgb(0 0 0 / 40%);
+  opacity: 0.6;
+}
+
+.signup-9-or::after {
+  content: "Or";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  z-index: 1;
+  background: #ffffff;
+  font-size: 12px;
+  padding: 0 12px;
+}
+
+/* Terms & conditions checkbox row */
+.signup-9-terms {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #5c5c5c;
+  padding: 2px 2px 0;
+}
+
+.signup-9-terms input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  border: 2px solid #c0c0c0;
+  background: #efefef;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  margin-top: 1px;
+}
+
+.signup-9-terms input[type="checkbox"]::after {
+  content: "";
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  rotate: -45deg;
+  translate: 0 -1px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.signup-9-terms input[type="checkbox"]:hover {
+  border-color: #9e9e9e;
+}
+
+.signup-9-terms input[type="checkbox"]:checked {
+  background: #332e2e;
+  border-color: #332e2e;
+}
+
+.signup-9-terms input[type="checkbox"]:checked::after {
+  opacity: 1;
+}
+
+.signup-9-terms input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgb(85 172 238 / 25%);
+}
+
+.signup-9-terms label {
+  cursor: pointer;
+}
+
+.signup-9-terms a {
+  color: #332e2e;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+@media (width >= 485px) {
+  .signup-9-card {
+    width: clamp(300px, 90vw, 740px);
+  }
+
+  .signup-9-form {
+    padding-inline: 50px;
+  }
+
+  .signup-9-socials {
+    flex-direction: column;
+  }
+
+  .signup-9-extra-text {
+    display: inline;
+  }
+}
+
+@media (width >= 640px) {
+  .signup-9-card {
+    padding: 8px 0 8px 8px;
+    flex-direction: row;
+  }
+
+  .signup-9-form {
+    padding: 30px;
+  }
+}
+
+.ocean {
+  height: 5%;
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  background: #226699;
+}
+
+.wave {
+  background: url(../assets/wave.svg) repeat-x;
+  position: absolute;
+  top: -198px;
+  width: 6400px;
+  height: 198px;
+  animation: wave 7s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+  transform: translate3d(0, 0, 0);
+}
+
+.wave:nth-of-type(2) {
+  top: -175px;
+  animation:
+    wave 7s cubic-bezier(0.36, 0.45, 0.63, 0.53) -0.125s infinite,
+    swell 7s ease -1.25s infinite;
+  opacity: 1;
+}
+
+@keyframes wave {
+  0% {
+    margin-left: 0;
+  }
+  100% {
+    margin-left: -1600px;
+  }
+}
+
+@keyframes swell {
+  0%,
+  100% {
+    transform: translate3d(0, -25px, 0);
+  }
+  50% {
+    transform: translate3d(0, 5px, 0);
+  }
+}

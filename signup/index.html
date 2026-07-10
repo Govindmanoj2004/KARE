@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <section class="page signup-9">
+    <div class="signup-9-card">
+      <div class="signup-9-hero">
+        <div class="ocean">
+          <div class="wave"></div>
+          <div class="wave"></div>
+        </div>
+      </div>
+      <form class="signup-9-form" id="signup-9-form">
+        <svg class="signup-9-logo" viewBox="0 0 2700 567" xmlns="http://www.w3.org/2000/svg">
+          <g clip-path="url(#signup9-heart-clip)">
+            <text x="313" y="450" text-anchor="middle" font-weight="600" font-size="480" fill="#226699">&#10084;</text>
+            <text x="283" y="420" text-anchor="middle" font-weight="600" font-size="450" fill="#55ACEE">&#10084;</text>
+          </g>
+          <defs>
+            <clipPath id="signup9-heart-clip">
+              <rect width="566" height="566" fill="white"/>
+            </clipPath>
+          </defs>
+          <text x="650" y="385" font-weight="600" font-size="300" fill="#143045">we.kare.com</text>
+        </svg>
+        <h3>Create your account</h3>
+        <div class="signup-9-socials">
+          <button type="button" class="signup-9-social-btn" id="google-btn">
+            <img src="../assets/google.svg" alt="Google" />
+            <p><span class="signup-9-extra-text">Sign up with</span> Google</p>
+          </button>
+          <button type="button" class="signup-9-social-btn" id="facebook-btn">
+            <img src="../assets/facebook.svg" alt="Facebook" />
+            <p><span class="signup-9-extra-text">Sign up with</span> Facebook</p>
+          </button>
+        </div>
+        <span class="signup-9-or"></span>
+        <input type="text" placeholder="Username" id="username" name="username" />
+        <input type="email" placeholder="Email" id="email" name="email" />
+        <input type="password" placeholder="Password" id="password" name="password" />
+        <div class="signup-9-terms">
+          <input type="checkbox" id="terms" name="terms" />
+          <label for="terms">I accept the <a href="#">Terms and Conditions</a></label>
+        </div>
+        <button type="submit">Sign Up</button>
+      </form>
+    </div>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>
