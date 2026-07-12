@@ -13,113 +13,119 @@
      CANVAS & SURFACES
      Sky-blue ocean canvas, white card surfaces.
      ------------------------------------------------------------------ */
-  --canvas:           #c7e7ff;
-  --layout-bg:        #eaf5fd;
-  --surface:          #ffffff;
-  --surface-raised:   #f4f9fd;
-  --surface-inset:    #efefef;
+  --canvas: #c7e7ff;
+  --layout-bg: #eaf5fd;
+  --surface: #ffffff;
+  --surface-raised: #f4f9fd;
+  --surface-inset: #efefef;
   --surface-inset-hover: #e6e6e6;
 
   /* ------------------------------------------------------------------
      BORDERS & DIVIDERS
      ------------------------------------------------------------------ */
-  --border:           rgb(0 0 0 / 10%);
-  --border-strong:    rgb(0 0 0 / 16%);
+  --border: rgb(0 0 0 / 10%);
+  --border-strong: rgb(0 0 0 / 16%);
 
   /* ------------------------------------------------------------------
      TEXT
      ------------------------------------------------------------------ */
-  --text-primary:     #332e2e;
-  --text-muted:       #7a7a7a;
+  --text-primary: #332e2e;
+  --text-muted: #7a7a7a;
   --text-placeholder: #9e9e9e;
-  --text-on-dark:     #f9f9f9;
-  --text-on-accent:   #ffffff;
+  --text-on-dark: #f9f9f9;
+  --text-on-accent: #ffffff;
 
   /* ------------------------------------------------------------------
      ACCENT — the single interactive color
      ------------------------------------------------------------------ */
-  --accent:           #55acee;
-  --accent-glow:      rgb(85 172 238 / 20%);
-  --accent-bg:        rgb(85 172 238 / 14%);
-  --accent-text:      #226699;
+  --accent: #55acee;
+  --accent-glow: rgb(85 172 238 / 20%);
+  --accent-bg: rgb(85 172 238 / 14%);
+  --accent-text: #226699;
 
   /* ------------------------------------------------------------------
      SEMANTIC STATUS COLORS
      ------------------------------------------------------------------ */
-  --status-taken-color:    #1f9d55;
-  --status-taken-bg:       rgb(31 157 85 / 14%);
+  --status-taken-color: #1f9d55;
+  --status-taken-bg: rgb(31 157 85 / 14%);
   --status-upcoming-color: #226699;
-  --status-upcoming-bg:    rgb(85 172 238 / 14%);
-  --status-missed-color:   #e0433f;
-  --status-missed-bg:      rgb(224 67 63 / 14%);
+  --status-upcoming-bg: rgb(85 172 238 / 14%);
+  --status-missed-color: #e0433f;
+  --status-missed-bg: rgb(224 67 63 / 14%);
 
   /* ------------------------------------------------------------------
      INTERACTIVE STATES
      ------------------------------------------------------------------ */
-  --hover-tint:       rgb(0 0 0 / 4%);
-  --hover-tint-md:    rgb(0 0 0 / 7%);
-  --translucent-btn:  rgb(0 0 0 / 6%);
-  --focus-ring:       0 0 0 4px var(--accent-glow);
+  --hover-tint: rgb(0 0 0 / 4%);
+  --hover-tint-md: rgb(0 0 0 / 7%);
+  --translucent-btn: rgb(0 0 0 / 6%);
+  --focus-ring: 0 0 0 4px var(--accent-glow);
 
   /* ------------------------------------------------------------------
      CTA / PRIMARY BUTTON
      Same as login/signup submit button.
      ------------------------------------------------------------------ */
-  --cta-bg:           #332e2e;
-  --cta-bg-hover:     #464040;
-  --cta-bg-active:    #241f1f;
-  --cta-text:         #f9f9f9;
+  --cta-bg: #332e2e;
+  --cta-bg-hover: #464040;
+  --cta-bg-active: #241f1f;
+  --cta-text: #f9f9f9;
 
   /* ------------------------------------------------------------------
      DANGER
      ------------------------------------------------------------------ */
-  --danger:           #e0433f;
-  --danger-bg:        rgb(224 67 63 / 10%);
+  --danger: #e0433f;
+  --danger-bg: rgb(224 67 63 / 10%);
 
   /* ------------------------------------------------------------------
      TYPOGRAPHY
      Same font stack as login/signup pages.
      ------------------------------------------------------------------ */
-  --font-family:      "Euclid Circular B", "Poppins", sans-serif;
+  --font-family: "Euclid Circular B", "Poppins", sans-serif;
 
   /* ------------------------------------------------------------------
      TYPE SCALE
      ------------------------------------------------------------------ */
-  --text-xs:          12px;
-  --text-sm:          13px;
-  --text-base:        14px;
-  --text-md:          16px;
-  --text-lg:          17px;
-  --text-xl:          24px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 17px;
+  --text-xl: 24px;
 
   /* ------------------------------------------------------------------
      RADII
      Same scale as login/signup: 30px card, 24px panel, 14px controls.
      ------------------------------------------------------------------ */
-  --radius-card:      30px;
-  --radius-panel:     24px;
-  --radius-control:   14px;
-  --radius-checkbox:  5px;
-  --radius-pill:      999px;
-  --radius-popover:   20px;
+  --radius-card: 30px;
+  --radius-panel: 24px;
+  --radius-control: 14px;
+  --radius-checkbox: 5px;
+  --radius-pill: 999px;
+  --radius-popover: 20px;
 
   /* ------------------------------------------------------------------
      SHADOWS
      Same as login/signup card shadow.
      ------------------------------------------------------------------ */
-  --shadow-card:      0 20px 40px -10px rgb(0 0 0 / 10%);
-  --shadow-sidebar:   20px 0 40px -10px rgb(0 0 0 / 14%);
+  --shadow-card: 0 20px 40px -10px rgb(0 0 0 / 10%);
+  --shadow-sidebar: 20px 0 40px -10px rgb(0 0 0 / 14%);
 
   /* ------------------------------------------------------------------
      TIMING & EASING
      ------------------------------------------------------------------ */
-  --ease:             0.25s ease;
-  --ease-transform:   0.15s ease;
+  --ease: 0.25s ease;
+  --ease-transform: 0.15s ease;
 
   /* ------------------------------------------------------------------
      LAYOUT
      ------------------------------------------------------------------ */
-  --sidebar-width:    260px;
-  --navbar-height:    76px;
-  --content-max:      1100px;
+  --sidebar-width: 260px;
+  --navbar-height: 76px;
+  --content-max: 1100px;
+
+  /* Toast colors */
+  --warning: #f5a623;
+  --warning-bg: rgb(245 166 35 / 14%);
+  --success: #1f9d55;
+  --success-bg: rgb(31 157 85 / 14%);
 }

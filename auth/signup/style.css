@@ -84,8 +84,11 @@ body {
   font-family: inherit;
   font-size: 16px;
   width: 100%;
-  transition: background-color 0.25s ease, box-shadow 0.25s ease,
-    transform 0.15s ease, opacity 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.15s ease,
+    opacity 0.25s ease;
 }
 
 .signup-9 button {
@@ -240,7 +243,9 @@ body {
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
   margin-top: 1px;
 }
 
@@ -357,4 +362,34 @@ body {
   50% {
     transform: translate3d(0, 5px, 0);
   }
+}
+/* Signup validation errors */
+.signup-9-errors {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 10px 14px;
+  background: rgb(224 67 63 / 10%);
+  border: 1px solid rgb(224 67 63 / 30%);
+  border-radius: 14px;
+  color: #e0433f;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.signup-9-errors li + li {
+  margin-top: 4px;
+}
+
+/* Login link under the form */
+.signup-9-login-link {
+  text-align: center;
+  font-size: 13px;
+  color: #5c5c5c;
+  margin-top: 4px;
+}
+
+.signup-9-login-link a {
+  color: #226699;
+  font-weight: 500;
+  text-decoration: underline;
 }
