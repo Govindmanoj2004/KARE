@@ -18,7 +18,7 @@ A calm, friendly, ocean-inspired SaaS aesthetic. Soft sky-blue backgrounds, roun
 kare/
   assets/
     connection/
-      Connection.php       ← MySQL DB connection (PDO)
+      Connection.php       ← MySQL DB connection (mysqli)
     svg/
       logo.svg             ← Brand mark (white wave squiggle)
       wave.svg             ← Horizontally-tileable wave for login/signup hero
@@ -27,17 +27,30 @@ kare/
     design.md              ← THIS FILE — single source of design truth
   auth/
     login/
-      index.html           ← Login page (self-contained HTML)
-      style.css            ← Login-specific styles
-      script.js            ← Login form validation
+      index.php            ← Login page
+      controller.php       ← Validates + authenticates against MySQL (mysqli)
+      style.css             ← Login-specific styles
+      script.js             ← Login form validation
     signup/
-      index.html           ← Signup page (self-contained HTML)
-      style.css            ← Signup-specific styles
-      script.js            ← Signup form validation + terms checkbox
+      index.php            ← Signup page
+      controller.php       ← Validates + creates a MySQL user (mysqli)
+      style.css             ← Signup-specific styles
+      script.js             ← Signup form validation + terms checkbox
+    logout.php             ← Destroys the session/cookie, redirects to login
+  doc/
+    Abstract.pdf           ← Project abstract for academic submission
   shared/
     tokens.css             ← All CSS custom properties (THE SINGLE SOURCE)
     base.css               ← Global reset, body, scrollbar, scroll-entry animation
-    components.css         ← Sidebar, navbar, popover, buttons, status badges
+    components.css         ← Sidebar, navbar, popover, buttons, form fields, profile header, status badges
+    toast/
+      toast.php            ← Renders #toast-container + reads $_SESSION['toast'] flash data
+      toast.css             ← Toast styling (error / warning / success)
+      toast.js              ← showToast(), dismissToast(), initFlashToasts()
+    modal/
+      modal.php            ← Reusable confirm-dialog markup + hidden form
+      modal.css             ← Modal styling (backdrop, card, danger variant)
+      modal.js              ← Wires any [data-mr-confirm] trigger to the dialog
     user/
       navbar.php           ← Reusable top navbar component
       sidebar.php          ← Reusable sidebar navigation component
@@ -46,6 +59,11 @@ kare/
       home.php             ← Dashboard page template
       home.css             ← Dashboard-specific styles (layout header, stat grid, table)
       home.js              ← Dashboard JS (popover, sidebar toggle, scroll-entry observer)
+      profile/
+        profile.php         ← Profile view + "Edit details" + "Change password" forms
+        profile_controller.php ← Handles both forms (mysqli, PRG + toast pattern)
+        profile.css          ← Profile page layout
+        profile.js            ← Same shell wiring as home.js + password-match hint
 ```
 
 ---
@@ -144,6 +162,28 @@ Full-viewport flex layout: sidebar on left, main column on right. Main column ha
 - Pill shape, 12px font, weight 500, color dot via `::before`.
 - `.is-taken` — green. `.is-upcoming` — blue. `.is-missed` — red.
 
+#### Form Fields (`.mr-form-grid`, `.mr-field`, `.mr-input`, `.mr-label`)
+
+- `.mr-form-grid` — CSS Grid, `repeat(auto-fit, minmax(220px, 1fr))`, 18px gap. Use `.mr-field.is-full` on a field to span the full row (e.g. a "current password" field above two side-by-side new/confirm fields).
+- `.mr-field` — label + input stacked, 6px gap.
+- `.mr-input` — 48px height, `--radius-control`, `--surface-inset` idle bg. Same hover/focus recipe as the auth-page inputs (hover → `--surface-inset-hover`, focus → white bg + accent border + glow ring), so a page built with `.mr-input` visually matches login/signup without duplicating their raw CSS.
+- `.mr-field-hint` — small muted helper text under a field, for optional inline validation hints.
+- `.mr-form-actions` — flex row for submit/cancel buttons, 12px gap.
+
+#### Secondary Button (`.mr-btn-secondary`)
+
+- Outline variant of `.mr-btn` — transparent bg, 2px `--border-strong` border, same 44px height/pill radius. Use for the less-emphasized action in a pair (e.g. "Cancel" next to a primary "Save", or "Update password" where the primary "Save changes" button already anchors the page).
+
+#### Divider (`.mr-divider`)
+
+- 1px `--border`-colored full-width rule with 28px vertical margin. Use to separate stacked sections within one `.mr-layout-card` (e.g. profile summary → edit form → password form) instead of splitting them into multiple cards.
+
+#### Profile Header (`.mr-profile-header`, `.mr-profile-avatar`, `.mr-badge`)
+
+- `.mr-profile-header` — flex row: large avatar circle + name/email/badges stack. Wraps to a column below 560px.
+- `.mr-profile-avatar` — 76px circle, accent background, initials in `--text-on-accent`. Same "first-letter" convention as the navbar's small avatar, just larger.
+- `.mr-badge` — small pill for role/status labels (accent tint by default). `.mr-badge.is-success` swaps to the green status tint for "active"-type states.
+
 #### Responsive
 
 - `@media (max-width: 900px)` — sidebar becomes fixed overlay with shadow, hamburger appears, search goes full width.
@@ -155,7 +195,10 @@ Full-viewport flex layout: sidebar on left, main column on right. Main column ha
 
 **Purpose:** Reusable data-driven sidebar. To add a new page link, add one array entry to `$mrNavGroups`. No HTML editing needed.
 
-**Expects:** `$activePage` to be set before including (e.g. `$activePage = 'dashboard'`).
+**Expects:**
+
+- `$activePage` to be set before including (e.g. `$activePage = 'dashboard'`).
+- `$mrRootBase` (optional, defaults to `'../../'`) — see §12. Every nav item's `href` is built as `$mrRootBase . 'pages/user/' . $item['href']`, so the array below still just holds plain filenames like `'home.php'` regardless of how deep the including page sits.
 
 **Contains:**
 
@@ -175,16 +218,77 @@ Full-viewport flex layout: sidebar on left, main column on right. Main column ha
 
 **Purpose:** Reusable top navigation bar with search, notifications, and profile popover.
 
-**Expects:** `$currentUser` array with `name`, `email`, `avatar` (optional). Falls back to `$_SESSION` values or "Guest Caretaker" if not set.
+**Expects:**
+
+- `$currentUser` array with `name`, `email`, `avatar` (optional). Falls back to `$_SESSION['name']` / `$_SESSION['email']` (or "Guest Caretaker") if not set.
+- `$mrRootBase` (optional, defaults to `'../../'`) — the relative path from the including page back to the project root. Every link this component builds (search, profile, settings, support, logout) is `$mrRootBase . 'pages/user/...'` or `$mrRootBase . 'auth/...'`, so the same include works correctly no matter how deeply the including page is nested. See §12 below.
 
 **Contains:**
 
 - Hamburger button (`.mr-sidebar-toggle`, hidden on desktop)
-- Search form (`.mr-search`, action `search.php`)
+- Search form (`.mr-search`, action `$mrRootBase . 'pages/user/search.php'`)
 - Notification bell (`.mr-icon-btn` with `.mr-dot`)
 - Avatar wrapper (`.mr-avatar-wrap`) with button + popover
-- Popover: user info header, profile/settings/support links, logout form
+- Popover: user info header, profile/settings/support links, **logout button** — opens the shared confirm modal (`data-mr-confirm-*` attributes) rather than submitting directly; see §13
 - Avatar fallback: `.mr-avatar-initial` (first letter of name) when no image URL provided
+
+---
+
+### `shared/toast/` — Toast / Flash Message Component
+
+**Purpose:** Post-redirect-get flash messaging. A controller sets `$_SESSION['toast'] = ['type' => 'error'|'warning'|'success', 'messages' => [...]]` before redirecting; the next page renders those messages as dismissing toasts, then the session key is cleared so they never reappear on refresh.
+
+- **`toast.php`** — outputs `<div id="toast-container">`. Reads `$_SESSION['toast']`, `unset()`s it immediately, and — if present — serializes it into a `data-flash` JSON attribute on the container.
+- **`toast.js`** — `showToast(type, message)` builds and animates in a single toast (icon + message + dismiss button, auto-dismiss after 4s). `initFlashToasts()` runs on page load, reads `data-flash` off the container, and calls `showToast()` for each message (staggered 150ms apart). Both functions are attached to `window`, so any inline script can call `showToast()` directly too.
+- **`toast.css`** — visual styling; `.toast-error` / `.toast-warning` / `.toast-success` set the left-icon color and border tint.
+
+**To use on a new page:** link `toast.css`, include `toast.php` once in the body (anywhere — it's `position: fixed`), and load `toast.js` before your page's own script.
+
+---
+
+### `shared/modal/` — Confirm Modal Component
+
+**Purpose:** One reusable "are you sure?" dialog, rather than a bespoke modal per destructive action. Any button anywhere on the page can open it by carrying `data-mr-confirm-*` attributes instead of submitting a form directly:
+
+```html
+<button
+  type="button"
+  data-mr-confirm
+  data-mr-confirm-action="../../auth/logout.php"
+  data-mr-confirm-method="post"
+  data-mr-confirm-title="Log out of Kare?"
+  data-mr-confirm-message="You'll need to sign in again to access your dashboard."
+  data-mr-confirm-label="Log out"
+  data-mr-confirm-icon="ph-sign-out"
+  data-mr-confirm-variant="danger"
+>
+  Log out
+</button>
+```
+
+- **`modal.php`** — one `.mr-modal-overlay` (backdrop + card: icon, title, message, Cancel/Confirm buttons) plus one hidden `<form data-mr-modal-form>`. Include this once per page, anywhere in the body.
+- **`modal.js`** — attaches a click handler to every `[data-mr-confirm]` element. Clicking one populates the modal's title/message/icon/confirm-label from that element's `data-*` attributes and sets the hidden form's `action`/`method`. Confirming submits that form; Cancel, clicking the backdrop, or `Escape` closes without submitting. Focus moves to the Confirm button on open and back to the trigger on close.
+- **`modal.css`** — dimmed + blurred backdrop, white card (`--surface` / `--radius-card` / `--shadow-card`), fade + scale-in transition matching the navbar popover's animation language. `data-mr-confirm-variant="danger"` tints the icon circle and Confirm button with `--danger` instead of the default accent tint.
+
+**Only required bits:** the `data-mr-confirm` marker and `data-mr-confirm-action`. Everything else falls back to a generic confirmation if omitted, so a new destructive action can be wired in one line — no changes to `modal.php`/`.js`/`.css` needed.
+
+**To use on a new page:** link `modal.css`, include `modal.php` once in the body, load `modal.js`, and add `data-mr-confirm-*` attributes to whatever button should confirm first.
+
+---
+
+### `pages/user/profile/` — Profile Page
+
+**Purpose:** The logged-in user's own account page — view current details and take two actions on them.
+
+- **`profile.php`** — auth-guarded (`$_SESSION['user_id']` required). Re-queries the `users` table by ID on every load rather than trusting session data, so it always reflects what's actually in the DB. Renders:
+  1. A profile summary (`.mr-profile-header`) — avatar initial, name, email, role/status badges.
+  2. An "Edit details" form (name, email, phone) inside `.mr-form-grid`.
+  3. A "Change password" form (current / new / confirm) inside `.mr-form-grid`.
+     Both forms post to `profile_controller.php`, distinguished by a hidden `action` field (`update_profile` / `change_password`), and both use the toast + PRG pattern.
+- **`profile_controller.php`** — mysqli prepared statements throughout. `update_profile` re-checks email uniqueness against _other_ users before saving and re-syncs `$_SESSION['name']`/`['email']`. `change_password` re-verifies the current password (plain text compare, same convention as login) before updating.
+- **`profile.css` / `profile.js`** — same shell wiring (`sidebar`, `avatar popover`, `scroll-entry`) as `home.js`, plus a small client-side "passwords match" hint on the change-password form (server still re-validates everything).
+
+**Depth note:** this page lives one level deeper than `pages/user/home.php` (`pages/user/profile/profile.php`), so its own asset/include paths use one extra `../`, and it sets `$mrRootBase = '../../../';` before including `sidebar.php`/`navbar.php` — see §12.
 
 ---
 
@@ -244,13 +348,17 @@ Full-viewport flex layout: sidebar on left, main column on right. Main column ha
 
 ### `assets/connection/Connection.php` — Database
 
-**Purpose:** PDO MySQL connection. Currently just the connection setup — queries are added per-page.
+**Purpose:** mysqli connection to `db_kare` (`localhost`, user `root`, no password — local XAMPP dev setup). Every controller does `require_once __DIR__ . '/../../assets/connection/Connection.php';` (adjusting the number of `../` for its own depth) and then uses `mysqli_prepare()` / `mysqli_stmt_bind_param()` for every query. No ORM, no query builder — plain procedural mysqli throughout, by design.
 
 ---
 
-### Auth Pages (`auth/login/`, `auth/signup/`)
+### Auth Pages (`auth/login/`, `auth/signup/`, `auth/logout.php`)
 
-**Purpose:** Self-contained login and signup pages. Each has its own `index.html`, `style.css`, and `script.js`. They do NOT use the shared token system (they predate it) but share the same design values.
+**Purpose:** Login and signup each have `index.php` (form + old-input repopulation on failed submit), `controller.php` (validation + mysqli query), `style.css`, and `script.js`. They predate the shared token system and don't `<link>` `tokens.css`/`components.css`/`base.css` directly — they hard-code the same design values inline (see below) rather than referencing `var(--token)`. Keep any palette or radius change in sync across both systems manually until the auth pages are migrated onto tokens.
+
+- **`login/controller.php`** — looks up the user by email, compares the password in plain text (accepted tradeoff for this project's academic scope), checks `status === 'active'`, and on success sets `$_SESSION['user_id']`, `$_SESSION['name']`, `$_SESSION['email']`, `$_SESSION['role']`. **Any page reading the logged-in user's identity must use these exact session keys** — see §12 below.
+- **`signup/controller.php`** — validates name/email/phone/password, checks for a duplicate email, inserts a new user with `role='patient'`, `status='active'`.
+- **`logout.php`** — clears `$_SESSION`, expires the session cookie, calls `session_destroy()`, redirects to `login/index.php`. Triggered via the confirm modal rather than a direct form submit — see §13.
 
 **Design values used (must stay in sync with tokens.css):**
 
@@ -423,13 +531,59 @@ Every page MUST load CSS files in this exact order:
 
 ---
 
-## 12. Checklist for Any New Page
+## 12. Session & Path Conventions
+
+### `$_SESSION` keys (set once, at login)
+
+`auth/login/controller.php` is the only place these get set, on successful login:
+
+| Key                    | Meaning                                      |
+| ---------------------- | -------------------------------------------- |
+| `$_SESSION['user_id']` | The user's `id` in the `users` table         |
+| `$_SESSION['name']`    | Display name                                 |
+| `$_SESSION['email']`   | Email address                                |
+| `$_SESSION['role']`    | `patient` / `caretaker` / `doctor` / `admin` |
+
+**Any page or component that needs the logged-in user's identity should read these exact keys.** (Earlier versions of `home.php` and `navbar.php` read `$_SESSION['user_name']`/`['user_email']` instead — a mismatch that silently fell back to placeholder data after every login. Both are fixed now; keep new pages consistent with the table above rather than reintroducing a second naming convention.)
+
+For anything beyond the display name/email (phone, status, etc.), re-query the `users` table by `$_SESSION['user_id']` rather than trying to stuff more into the session — `profile.php` does this.
+
+### `$mrRootBase` (depth-independent shared links)
+
+`sidebar.php` and `navbar.php` are included from pages at different folder depths (`pages/user/home.php` vs. `pages/user/profile/profile.php`, and potentially deeper in future). Rather than hard-coding `../../` inside those shared components, the including page sets one variable beforehand:
+
+```php
+$mrRootBase = '../../';      // pages/user/home.php            (2 levels to root)
+$mrRootBase = '../../../';   // pages/user/profile/profile.php (3 levels to root)
+```
+
+Every link `sidebar.php`/`navbar.php` builds — nav items, search, profile/settings/support, logout — is `$mrRootBase . 'pages/user/...'` or `$mrRootBase . 'auth/...'`. **Any new page that lives deeper than `pages/user/{file}.php` must set `$mrRootBase` to the correct number of `../` before including these two files**, or the shared nav will link to the wrong place. The default (`'../../'`) covers the common case, so pages directly inside `pages/user/` can omit it entirely.
+
+---
+
+## 13. Confirm-First Actions (logout, and future destructive actions)
+
+Any action that should ask "are you sure?" before running — logging out, deleting an account, canceling a prescription — follows the same pattern instead of a bespoke confirm dialog each time:
+
+1. The triggering element is a `type="button"` (not a submitting `type="submit"`), carrying `data-mr-confirm` plus `data-mr-confirm-action` (required) and optionally `-title`, `-message`, `-label`, `-icon`, `-variant="danger"`.
+2. `shared/modal/modal.php` is included once on the page; `shared/modal/modal.js` reads those attributes on click, populates the dialog, and submits its own hidden form to `data-mr-confirm-action` only if the person confirms.
+3. Use `data-mr-confirm-variant="danger"` for anything destructive/irreversible (logout, delete) — it swaps the icon and Confirm button to `--danger`. Leave it off for lower-stakes confirmations, which use the standard accent/CTA styling.
+
+See §3 → `shared/modal/` above for the full API.
+
+---
+
+## 14. Checklist for Any New Page
 
 - [ ] Load CSS in order: `tokens.css` → `base.css` → `components.css` → `{page}.css`
 - [ ] Load Poppins font: `Poppins:wght@400;500;600`
 - [ ] Load Phosphor Icons if icons are needed
 - [ ] Set `$activePage` before including `sidebar.php`
 - [ ] Set `$currentUser` before including `navbar.php`
+- [ ] Set `$mrRootBase` before including `sidebar.php`/`navbar.php` if this page lives deeper than `pages/user/{file}.php` (§12)
+- [ ] Read the logged-in user via `$_SESSION['user_id']` / `['name']` / `['email']` / `['role']` — not any other key (§12)
+- [ ] Include `shared/toast/` if this page's controller can set flash messages
+- [ ] Include `shared/modal/` and use `data-mr-confirm-*` for any destructive or confirm-first action (§13)
 - [ ] Colors from tokens only — no new hues
 - [ ] Radii from tokens only — `--radius-card` for cards, `--radius-control` for inputs/buttons
 - [ ] All interactive elements use the `--focus-ring` treatment on `:focus-visible`
