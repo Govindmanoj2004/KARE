@@ -21,6 +21,14 @@ if (!isset($activePage)) {
     $activePage = '';
 }
 
+// Relative path from the CURRENT file's folder back to the project root.
+// Pages directly in pages/user/ (e.g. home.php) should set '../../'.
+// Pages nested one level deeper (e.g. pages/user/profile/profile.php)
+// should set '../../../', and so on. Defaults to the common case.
+if (!isset($mrRootBase)) {
+    $mrRootBase = '../../';
+}
+
 // ---------------------------------------------------------------------
 // Nav data. In production, badges (e.g. unread messages, open tickets)
 // would be populated from the database rather than hard-coded.
@@ -67,7 +75,7 @@ $mrNavGroups = [
                 <?php foreach ($group['items'] as $item): ?>
                     <li>
                         <a
-                            href="<?= htmlspecialchars($item['href']) ?>"
+                            href="<?= htmlspecialchars($mrRootBase . 'pages/user/' . $item['href']) ?>"
                             class="mr-nav-item<?= $activePage === $item['key'] ? ' is-active' : '' ?>"
                             <?= $activePage === $item['key'] ? 'aria-current="page"' : '' ?>>
                             <i class="ph <?= htmlspecialchars($item['icon']) ?>"></i>
@@ -83,7 +91,7 @@ $mrNavGroups = [
     </nav>
 
     <div class="mr-sidebar-footer">
-        <a href="help.php" class="mr-nav-item">
+        <a href="<?= htmlspecialchars($mrRootBase . 'pages/user/help.php') ?>" class="mr-nav-item">
             <i class="ph ph-question"></i>
             <span>Help &amp; FAQ</span>
         </a>

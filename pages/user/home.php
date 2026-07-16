@@ -18,10 +18,11 @@ session_start();
 // --- Data this page needs ------------------------------------------------
 // In production these come from MySQL (users, schedules, dose_logs, etc.)
 $activePage = 'dashboard';
+$mrRootBase = '../../'; // this file lives at pages/user/home.php
 
 $currentUser = [
-    'name'   => $_SESSION['user_name']  ?? 'Reji Mathew',
-    'email'  => $_SESSION['user_email'] ?? 'reji.mathew@example.com',
+    'name'   => $_SESSION['name']  ?? 'Reji Mathew',
+    'email'  => $_SESSION['email'] ?? 'reji.mathew@example.com',
     'avatar' => null, // e.g. 'assets/img/users/12.jpg'
 ];
 
@@ -58,6 +59,7 @@ $statusLabels = [
     <link rel="stylesheet" href="../../shared/tokens.css">
     <link rel="stylesheet" href="../../shared/base.css">
     <link rel="stylesheet" href="../../shared/components.css">
+    <link rel="stylesheet" href="../../shared/modal/modal.css">
     <link rel="stylesheet" href="home.css">
 
     <!-- Icons: Phosphor (regular weight) -->
@@ -70,6 +72,8 @@ $statusLabels = [
 </head>
 
 <body>
+
+    <?php include __DIR__ . '/../../shared/modal/modal.php'; ?>
 
     <div class="mr-app-shell" data-mr-app-shell>
 
@@ -144,6 +148,7 @@ $statusLabels = [
     </div>
 
     <script src="home.js"></script>
+    <script src="../../shared/modal/modal.js"></script>
 </body>
 
 </html>

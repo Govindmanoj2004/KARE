@@ -18,20 +18,25 @@
 if (!isset($currentUser)) {
     // Fallback so the component never breaks if included on its own.
     $currentUser = [
-        'name'  => $_SESSION['user_name']  ?? 'Guest Caretaker',
-        'email' => $_SESSION['user_email'] ?? '',
+        'name'  => $_SESSION['name']  ?? 'Guest Caretaker',
+        'email' => $_SESSION['email'] ?? '',
         'avatar' => null,
     ];
 }
 
 $mrInitial = strtoupper(substr(trim($currentUser['name']), 0, 1) ?: 'U');
+
+// See shared/user/sidebar.php for an explanation of $mrRootBase.
+if (!isset($mrRootBase)) {
+    $mrRootBase = '../../';
+}
 ?>
 <header class="mr-navbar">
     <button type="button" class="mr-sidebar-toggle" data-mr-sidebar-toggle aria-label="Toggle navigation">
         <i class="ph ph-list"></i>
     </button>
 
-    <form class="mr-search" action="search.php" method="get" role="search">
+    <form class="mr-search" action="<?= htmlspecialchars($mrRootBase . 'pages/user/search.php') ?>" method="get" role="search">
         <i class="ph ph-magnifying-glass"></i>
         <input
             type="search"
@@ -84,23 +89,32 @@ $mrInitial = strtoupper(substr(trim($currentUser['name']), 0, 1) ?: 'U');
 
                 <div class="mr-popover-divider"></div>
 
-                <a href="profile.php" class="mr-popover-item" role="menuitem">
+                <a href="<?= htmlspecialchars($mrRootBase . 'pages/user/profile/profile.php') ?>" class="mr-popover-item" role="menuitem">
                     <i class="ph ph-user"></i> View profile
                 </a>
-                <a href="settings.php" class="mr-popover-item" role="menuitem">
+                <a href="<?= htmlspecialchars($mrRootBase . 'pages/user/settings.php') ?>" class="mr-popover-item" role="menuitem">
                     <i class="ph ph-gear-six"></i> Account settings
                 </a>
-                <a href="tickets.php?new=1" class="mr-popover-item" role="menuitem">
+                <a href="<?= htmlspecialchars($mrRootBase . 'pages/user/tickets.php?new=1') ?>" class="mr-popover-item" role="menuitem">
                     <i class="ph ph-lifebuoy"></i> Contact support
                 </a>
 
                 <div class="mr-popover-divider"></div>
 
-                <form action="../../auth/logout.php" method="post">
-                    <button type="submit" class="mr-popover-item is-danger" role="menuitem">
-                        <i class="ph ph-sign-out"></i> Log out
-                    </button>
-                </form>
+                <button
+                    type="button"
+                    class="mr-popover-item is-danger"
+                    role="menuitem"
+                    data-mr-confirm
+                    data-mr-confirm-action="<?= htmlspecialchars($mrRootBase . 'auth/logout.php') ?>"
+                    data-mr-confirm-method="post"
+                    data-mr-confirm-title="Log out of Kare?"
+                    data-mr-confirm-message="You'll need to sign in again to access your dashboard."
+                    data-mr-confirm-label="Log out"
+                    data-mr-confirm-icon="ph-sign-out"
+                    data-mr-confirm-variant="danger">
+                    <i class="ph ph-sign-out"></i> Log out
+                </button>
             </div>
         </div>
     </div>
