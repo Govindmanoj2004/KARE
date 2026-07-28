@@ -54,7 +54,7 @@ $mrNavGroups = [
         'label' => 'Support',
         'items' => [
             ['key' => 'reports',  'label' => 'Reports',        'icon' => 'ph-chart-line',  'href' => 'reports.php'],
-            ['key' => 'tickets',  'label' => 'Support Tickets', 'icon' => 'ph-lifebuoy',    'href' => 'tickets.php'],
+            ['key' => 'report',  'label' => 'Report Issue', 'icon' => 'ph-flag',    'href' => 'report/report.php'],
             ['key' => 'settings', 'label' => 'Settings',       'icon' => 'ph-gear-six',    'href' => 'settings.php'],
         ],
     ],

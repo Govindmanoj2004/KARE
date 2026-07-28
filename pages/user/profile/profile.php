@@ -5,7 +5,7 @@
  * -----------------------------------------------------------------------
  * Logged-in user's profile page.
  *   - Shows name / email / phone / role / status pulled fresh from the DB.
- *   - "Edit details" form updates name, email, phone.
+ *   - "Edit details" form updates name, email, phone, state, district.
  *   - "Change password" form updates the password (plain text — entry-level
  *     project scope, same as the rest of the auth flow).
  * Both forms post to profile_controller.php using the PRG + toast pattern
@@ -23,7 +23,7 @@ if (!isset($_SESSION['user_id'])) {
 require_once __DIR__ . '/../../../assets/connection/Connection.php';
 
 // --- Fetch fresh user data from the DB (session may be stale) -------------
-$stmt = mysqli_prepare($con, 'SELECT id, name, email, phone, role, status FROM users WHERE id = ? LIMIT 1');
+$stmt = mysqli_prepare($con, 'SELECT id, name, email, phone, role, status, state_id, district_id FROM users WHERE id = ? LIMIT 1');
 mysqli_stmt_bind_param($stmt, 'i', $_SESSION['user_id']);
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
@@ -50,9 +50,33 @@ $currentUser = [
 $formOld = $_SESSION['profile_old'] ?? null;
 unset($_SESSION['profile_old']);
 
-$nameValue  = $formOld['name']  ?? $profileUser['name'];
-$emailValue = $formOld['email'] ?? $profileUser['email'];
-$phoneValue = $formOld['phone'] ?? $profileUser['phone'];
+$nameValue      = $formOld['name']        ?? $profileUser['name'];
+$emailValue     = $formOld['email']       ?? $profileUser['email'];
+$phoneValue     = $formOld['phone']       ?? $profileUser['phone'];
+$stateIdValue   = $formOld['state_id']    ?? $profileUser['state_id'];
+$districtIdValue = $formOld['district_id'] ?? $profileUser['district_id'];
+
+// --- All states, for the dropdown ------------------------------------------
+$states = [];
+$statesResult = mysqli_query($con, 'SELECT id, name FROM states ORDER BY name ASC');
+while ($row = mysqli_fetch_assoc($statesResult)) {
+    $states[] = $row;
+}
+
+// --- Districts for the currently-selected state -----------------------------
+// (rendered server-side so the page works correctly even before JS runs;
+// profile.js takes over and re-fetches this list whenever the state changes)
+$districts = [];
+if ($stateIdValue) {
+    $districtStmt = mysqli_prepare($con, 'SELECT id, name FROM districts WHERE state_id = ? ORDER BY name ASC');
+    mysqli_stmt_bind_param($districtStmt, 'i', $stateIdValue);
+    mysqli_stmt_execute($districtStmt);
+    $districtResult = mysqli_stmt_get_result($districtStmt);
+    while ($row = mysqli_fetch_assoc($districtResult)) {
+        $districts[] = $row;
+    }
+    mysqli_stmt_close($districtStmt);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -145,6 +169,30 @@ $phoneValue = $formOld['phone'] ?? $profileUser['phone'];
                             <div class="mr-field">
                                 <label class="mr-label" for="phone">Phone number</label>
                                 <input class="mr-input" type="tel" id="phone" name="phone" value="<?= htmlspecialchars($phoneValue) ?>" required>
+                            </div>
+
+                            <div class="mr-field">
+                                <label class="mr-label" for="state_id">State</label>
+                                <select class="mr-input" id="state_id" name="state_id" data-mr-state-select>
+                                    <option value="">-- Select state --</option>
+                                    <?php foreach ($states as $state): ?>
+                                        <option value="<?= (int) $state['id'] ?>" <?= ((int) $stateIdValue === (int) $state['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($state['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="mr-field">
+                                <label class="mr-label" for="district_id">District</label>
+                                <select class="mr-input" id="district_id" name="district_id" data-mr-district-select <?= empty($districts) ? 'disabled' : '' ?>>
+                                    <option value="">-- Select district --</option>
+                                    <?php foreach ($districts as $district): ?>
+                                        <option value="<?= (int) $district['id'] ?>" <?= ((int) $districtIdValue === (int) $district['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($district['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
                         </div>
 

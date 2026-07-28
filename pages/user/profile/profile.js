@@ -95,6 +95,62 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ===================================================================
+  // State -> District cascading dropdown
+  // ===================================================================
+
+  var stateSelect = document.querySelector("[data-mr-state-select]");
+  var districtSelect = document.querySelector("[data-mr-district-select]");
+
+  if (stateSelect && districtSelect) {
+    function loadDistricts(stateId, selectedDistrictId) {
+      if (!stateId) {
+        districtSelect.innerHTML =
+          '<option value="">-- Select district --</option>';
+        districtSelect.disabled = true;
+        return;
+      }
+
+      districtSelect.disabled = true;
+      districtSelect.innerHTML = '<option value="">Loading...</option>';
+
+      fetch("get_districts.php?state_id=" + encodeURIComponent(stateId))
+        .then(function (res) {
+          return res.json();
+        })
+        .then(function (districts) {
+          var html = '<option value="">-- Select district --</option>';
+          districts.forEach(function (district) {
+            var isSelected =
+              selectedDistrictId &&
+              String(selectedDistrictId) === String(district.id)
+                ? " selected"
+                : "";
+            html +=
+              '<option value="' +
+              district.id +
+              '"' +
+              isSelected +
+              ">" +
+              district.name +
+              "</option>";
+          });
+          districtSelect.innerHTML = html;
+          districtSelect.disabled = false;
+        })
+        .catch(function () {
+          districtSelect.innerHTML =
+            '<option value="">-- Select district --</option>';
+          districtSelect.disabled = false;
+        });
+    }
+
+    stateSelect.addEventListener("change", function () {
+      // A fresh state pick always starts the district over.
+      loadDistricts(stateSelect.value, null);
+    });
+  }
+
+  // ===================================================================
   // Change-password form: client-side "passwords match" hint
   // (server still re-validates everything — this is just UX polish)
   // ===================================================================

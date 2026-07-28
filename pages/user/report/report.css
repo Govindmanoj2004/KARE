@@ -1,14 +1,14 @@
 /* ==========================================================================
-   Kare — Profile Page Styles
+   Kare — Reports Page Styles
    --------------------------------------------------------------------------
-   Page-specific layout for profile.php.
-   Shared components (sidebar, navbar, buttons, form fields, profile header)
-   live in shared/components.css — this file covers only page layout.
+   Page-specific layout for reports.php.
+   Shared components (sidebar, navbar, buttons, form fields) live in
+   shared/components.css — this file covers page layout + the report list.
    ========================================================================== */
 
 /* =========================================================================
    LAYOUT HEADER
-   Same signature blue blob technique as the dashboard.
+   Same signature blue blob technique used on the dashboard/profile pages.
    ========================================================================= */
 
 .mr-layout-header {
@@ -90,26 +90,124 @@
   gap: 18px;
 }
 
-/* =========================================================================
-   STATE / DISTRICT SELECTS
-   .mr-input already covers the shared field look (border, padding, radius);
-   this just adds the native <select> arrow + disabled-state treatment,
-   since select and input render differently by default.
-   ========================================================================= */
-
-select.mr-input {
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23332e2e' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 16px center;
-  padding-right: 40px;
-  cursor: pointer;
+.mr-textarea {
+  resize: vertical;
+  min-height: 110px;
+  font-family: inherit;
 }
 
-select.mr-input:disabled {
-  cursor: not-allowed;
+/* =========================================================================
+   REPORT LIST
+   ========================================================================= */
+
+.mr-report-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 20px;
+  color: rgb(51 46 46 / 55%);
+  text-align: center;
+}
+
+.mr-report-empty i {
+  font-size: 32px;
+  color: var(--accent);
   opacity: 0.6;
+}
+
+.mr-report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mr-report-item {
+  border: 1px solid rgb(51 46 46 / 10%);
+  border-radius: var(--radius-control, 14px);
+  padding: 18px 20px;
+}
+
+.mr-report-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mr-report-item-subject {
+  font-weight: 600;
+  font-size: var(--text-base);
+}
+
+.mr-report-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgb(51 46 46 / 55%);
+  margin-top: 4px;
+}
+
+.mr-report-item-message {
+  margin-top: 12px;
+  line-height: 1.6;
+  color: rgb(51 46 46 / 85%);
+  white-space: pre-line;
+}
+
+.mr-report-reply {
+  margin-top: 14px;
+  background: rgb(85 172 238 / 8%);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  padding: 12px 16px;
+}
+
+.mr-report-reply-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.mr-report-reply-time {
+  margin-left: auto;
+  font-weight: 400;
+  font-size: 12px;
+  color: rgb(51 46 46 / 55%);
+}
+
+.mr-report-reply p {
+  margin-top: 6px;
+  line-height: 1.6;
+  color: rgb(51 46 46 / 85%);
+}
+
+/* Status badges — subject-report specific states, layered on top of the
+   shared .mr-badge look (background/border/pill shape already defined
+   in shared/components.css). */
+
+.mr-badge.is-open {
+  color: var(--accent);
+  border-color: rgb(85 172 238 / 30%);
+}
+
+.mr-badge.is-progress {
+  color: var(--warning, #f5a623);
+  border-color: rgb(245 166 35 / 35%);
+}
+
+.mr-badge.is-success {
+  color: var(--success, #1f9d55);
+  border-color: rgb(31 157 85 / 30%);
+}
+
+.mr-badge.is-closed {
+  color: rgb(51 46 46 / 60%);
+  border-color: rgb(51 46 46 / 20%);
 }
 
 /* =========================================================================
@@ -136,8 +234,9 @@ select.mr-input:disabled {
     padding: 20px;
   }
 
-  .mr-profile-header {
+  .mr-report-item-header {
     flex-direction: column;
     align-items: flex-start;
+    gap: 8px;
   }
 }

@@ -1,6 +1,6 @@
 # KARE (MediRemind) — Progress Log
 
-A chronological record of what's been built so far. For the *current* design
+A chronological record of what's been built so far. For the _current_ design
 system rules and file-by-file reference, see `assets/design.md` — that file
 is the living source of truth; this one is a timeline for the project
 report / viva.
@@ -98,6 +98,57 @@ nested at any depth without breaking shared navigation. Full details in
 
 Design rationale and full API in `design.md` §13.
 
+## 8. Address fields — state & district on profile
+
+- Added `states` and `districts` reference tables, seeded with all 28 Indian
+  states + 8 Union Territories and their ~780 districts (`districts.state_id`
+  FKs to `states.id`).
+- `users` gained nullable `state_id` / `district_id` columns, FK'd to the new
+  tables with `ON DELETE SET NULL` — existing accounts aren't broken by the
+  addition; both fields simply show as "not set" until a user picks them.
+- `profile.php`'s "Edit details" form gained a State and a District
+  `<select>`. The district list is:
+  - **server-rendered on page load**, based on the user's saved `state_id`,
+    so the page is correct even before any JS runs;
+  - **re-fetched via AJAX** (`pages/user/profile/get_districts.php`)
+    whenever the state dropdown changes, so switching states always shows
+    the right districts without a full page reload.
+- `profile_controller.php` validates both fields server-side: a submitted
+  district must actually belong to the submitted state, and a district
+  can't be saved without a state.
+
+## 9. Issue reporting page (user-facing)
+
+- New `reports` table: `user_id`, `subject`, `message`, `status` (`open` /
+  `in_progress` / `resolved` / `closed`), `admin_reply`, `replied_at`, plus
+  the usual timestamps. The schema already carries what an admin reply flow
+  will need, even though that admin-side UI doesn't exist yet.
+- Built `pages/user/report/report.php` + `report_controller.php` — same
+  PRG + toast pattern as the profile forms: a form to submit a new report,
+  and a list of the user's own past reports showing a status badge, filed
+  timestamp, the message, and (once populated) the admin's reply with its
+  own timestamp.
+- Added a "Report Issue" sidebar entry (`key: report`) alongside an existing
+  "Reports" analytics entry (`key: reports`) in `shared/user/sidebar.php`.
+
+**Bugs caught along the way:**
+
+- The page and its controller were first scaffolded as `reports.php` /
+  `reports_controller.php` directly under `pages/user/`, then moved into a
+  `pages/user/report/` subfolder with singular filenames. The move needed
+  three things updated in tandem that are easy to miss: `$mrRootBase`
+  (`'../../'` → `'../../../'`, one folder deeper), every hard-coded
+  `shared/...`/auth-redirect path at that same new depth, and the
+  `<form action>` / `<link>` / `<script>` tags pointing at the renamed
+  `report.css` / `report.js` / `report_controller.php` files. The `reports`
+  _database table_ name was deliberately left untouched throughout — only
+  file references changed.
+- `report.php` was setting `$activePage = 'reports'` (left over from before
+  the rename), which matched the sidebar's _Reports_ (analytics) item
+  instead of its own _Report Issue_ item — so the wrong sidebar link
+  highlighted as active. Fixed by setting `$activePage = 'report'` to match
+  its actual nav key.
+
 ---
 
 ## What's next (not yet built)
@@ -112,5 +163,12 @@ Per the original project scope, still pending:
 - Prescription upload + text extraction
 - Doctor connection lifecycle
 - Doctor–caretaker chat (polling-based)
-- Admin module (user management, doctor verification, support tickets,
-  reports, system health)
+- Admin module (user management, doctor verification, system health, and
+  a reply/management view for the reports table added in §9 — user-side
+  submission is done, admin-side reply is not)
+- Account settings page (`settings.php`, already linked from the sidebar)
+  — discussed but not yet built. Candidates: notification preference
+  toggles, account deactivation (flip `status` to `deactivated`, same
+  confirm-modal pattern as logout), linked caretaker/doctor accounts with
+  disconnect, last-login/session info, and data export or soft-delete
+  (`deleted_at` already exists on `users`)
