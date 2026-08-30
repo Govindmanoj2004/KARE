@@ -1,0 +1,120 @@
+/* ==========================================================================
+   Kare — Doctor Requests Page Styles
+   ========================================================================== */
+
+.mr-layout-header {
+  position: relative;
+  overflow: hidden;
+  padding: 40px 40px 120px;
+}
+
+.mr-layout-header::before {
+  content: "";
+  position: absolute;
+  bottom: -420vw;
+  left: 50%;
+  translate: -50% 0;
+  width: 500vw;
+  height: 500vw;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.16;
+}
+
+.mr-layout-header-row {
+  position: relative;
+  z-index: 1;
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+.mr-layout-header-heading {
+  font-size: var(--text-xl);
+  font-weight: 400;
+}
+
+.mr-layout-header-heading strong {
+  font-weight: 600;
+}
+
+.mr-layout-header-sub {
+  font-size: var(--text-base);
+  color: rgb(51 46 46 / 65%);
+  margin-top: 6px;
+}
+
+.mr-layout-card {
+  position: relative;
+  z-index: 2;
+  max-width: var(--content-max);
+  margin: -100px auto 40px;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: 32px;
+  box-shadow: var(--shadow-card);
+}
+
+.mr-schedule-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: rgb(51 46 46 / 55%);
+  text-align: center;
+}
+
+.mr-schedule-empty i {
+  font-size: 32px;
+  color: var(--accent);
+  opacity: 0.6;
+}
+
+/* =========================================================================
+   REQUEST CARDS
+   ========================================================================= */
+
+.mr-request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mr-request-card {
+  border: 1px solid rgb(51 46 46 / 10%);
+  border-radius: var(--radius-control, 14px);
+  padding: 18px 20px;
+}
+
+.mr-request-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mr-request-avatar {
+  width: 44px;
+  height: 44px;
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.mr-request-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.mr-request-message {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  background: var(--surface-raised);
+  border-radius: var(--radius-control, 14px);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.mr-request-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}

@@ -1,0 +1,143 @@
+/* ==========================================================================
+   Kare — Profile Page Styles
+   --------------------------------------------------------------------------
+   Page-specific layout for profile.php.
+   Shared components (sidebar, navbar, buttons, form fields, profile header)
+   live in shared/components.css — this file covers only page layout.
+   ========================================================================== */
+
+/* =========================================================================
+   LAYOUT HEADER
+   Same signature blue blob technique as the dashboard.
+   ========================================================================= */
+
+.mr-layout-header {
+  position: relative;
+  overflow: hidden;
+  padding: 40px 40px 120px;
+}
+
+.mr-layout-header::before {
+  content: "";
+  position: absolute;
+  bottom: -420vw;
+  left: 50%;
+  translate: -50% 0;
+  width: 500vw;
+  height: 500vw;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.16;
+}
+
+.mr-layout-header-row {
+  position: relative;
+  z-index: 1;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.mr-layout-header-heading {
+  font-size: var(--text-xl);
+  font-weight: 400;
+}
+
+.mr-layout-header-heading strong {
+  font-weight: 600;
+}
+
+.mr-layout-header-sub {
+  font-size: var(--text-base);
+  color: rgb(51 46 46 / 65%);
+  margin-top: 6px;
+}
+
+/* =========================================================================
+   LAYOUT CARD
+   ========================================================================= */
+
+.mr-layout-card {
+  position: relative;
+  z-index: 2;
+  max-width: var(--content-max);
+  margin: -100px auto 40px;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: 32px;
+  box-shadow: var(--shadow-card);
+}
+
+.mr-card-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.mr-card-heading {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.mr-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* =========================================================================
+   STATE / DISTRICT SELECTS
+   .mr-input already covers the shared field look (border, padding, radius);
+   this just adds the native <select> arrow + disabled-state treatment,
+   since select and input render differently by default.
+   ========================================================================= */
+
+select.mr-input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23332e2e' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 40px;
+  cursor: pointer;
+}
+
+select.mr-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* =========================================================================
+   RESPONSIVE
+   ========================================================================= */
+
+@media (max-width: 900px) {
+  .mr-layout-card {
+    margin: -100px 16px 40px;
+  }
+
+  .mr-layout-header {
+    padding: 32px 20px 120px;
+  }
+}
+
+@media (max-width: 560px) {
+  .mr-layout-header {
+    padding: 24px 16px 100px;
+  }
+
+  .mr-layout-card {
+    margin: -80px 12px 24px;
+    padding: 20px;
+  }
+
+  .mr-profile-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

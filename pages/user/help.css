@@ -1,0 +1,117 @@
+/* ==========================================================================
+   Kare — Help & FAQ Page Styles
+   ========================================================================== */
+
+.mr-layout-header {
+  position: relative;
+  overflow: hidden;
+  padding: 40px 40px 120px;
+}
+
+.mr-layout-header::before {
+  content: "";
+  position: absolute;
+  bottom: -420vw;
+  left: 50%;
+  translate: -50% 0;
+  width: 500vw;
+  height: 500vw;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.16;
+}
+
+.mr-layout-header-row {
+  position: relative;
+  z-index: 1;
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+.mr-layout-header-heading {
+  font-size: var(--text-xl);
+  font-weight: 400;
+}
+
+.mr-layout-header-heading strong {
+  font-weight: 600;
+}
+
+.mr-layout-header-sub {
+  font-size: var(--text-base);
+  color: rgb(51 46 46 / 65%);
+  margin-top: 6px;
+}
+
+.mr-layout-card {
+  position: relative;
+  z-index: 2;
+  max-width: var(--content-max);
+  margin: -100px auto 40px;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: 32px;
+  box-shadow: var(--shadow-card);
+}
+
+/* =========================================================================
+   FAQ ACCORDION
+   ========================================================================= */
+
+.mr-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mr-faq-item {
+  border: 1px solid rgb(51 46 46 / 10%);
+  border-radius: var(--radius-control, 14px);
+  padding: 4px 20px;
+}
+
+.mr-faq-item summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: var(--text-base);
+}
+
+.mr-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.mr-faq-item summary i {
+  color: var(--text-muted);
+  transition: transform var(--ease-transform, 0.15s ease);
+  flex-shrink: 0;
+}
+
+.mr-faq-item[open] summary i {
+  transform: rotate(180deg);
+}
+
+.mr-faq-item p {
+  color: var(--text-muted);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  padding-bottom: 16px;
+  margin: 0;
+}
+
+/* =========================================================================
+   HELP CTA
+   ========================================================================= */
+
+.mr-help-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
