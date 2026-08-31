@@ -64,6 +64,10 @@ function old(string $key, array $old): string
         <span class="login-9-or"></span>
         <input type="email" placeholder="Email" id="email" name="email" value="<?= old('email', $old) ?>" />
         <input type="password" placeholder="Password" id="password" name="password" />
+        <label class="login-9-remember">
+          <input type="checkbox" id="remember_me" name="remember_me" value="1" />
+          <span>Remember me</span>
+        </label>
         <button type="submit">Login</button>
       </form>
     </div>

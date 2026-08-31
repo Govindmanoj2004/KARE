@@ -8,14 +8,14 @@ This README is written to be a complete, standalone reference for continuing dev
 
 ## 1. Tech Stack
 
-| Layer              | Technology                                                                     |
-| ------------------ | ------------------------------------------------------------------------------ |
-| Server language    | PHP 8.3, procedural style, no framework                                        |
-| Database           | MySQL / MariaDB, accessed via `mysqli` (prepared statements throughout)        |
-| Frontend           | Plain HTML + CSS + vanilla JS (no build step, no bundler, no framework)        |
-| Icons              | Phosphor Icons via CDN (`unpkg.com/@phosphor-icons/web@2.1.1`)                 |
-| Fonts              | Google Fonts "Poppins" (working fallback for the licensed "Euclid Circular B") |
-| Typical local host | XAMPP (Apache + MySQL/MariaDB + PHP)                                           |
+| Layer | Technology |
+|---|---|
+| Server language | PHP 8.3, procedural style, no framework |
+| Database | MySQL / MariaDB, accessed via `mysqli` (prepared statements throughout) |
+| Frontend | Plain HTML + CSS + vanilla JS (no build step, no bundler, no framework) |
+| Icons | Phosphor Icons via CDN (`unpkg.com/@phosphor-icons/web@2.1.1`) |
+| Fonts | Google Fonts "Poppins" (working fallback for the licensed "Euclid Circular B") |
+| Typical local host | XAMPP (Apache + MySQL/MariaDB + PHP) |
 
 **No package manager, no Composer, no npm.** Everything is flat files served directly by Apache/PHP's built-in server.
 
@@ -67,6 +67,11 @@ KARE/
 │       ├── patients/       (patients.php, patients_controller.php, .css, .js)
 │       ├── messages/       (messages.php, messages_controller.php, messages_poll.php, .css, .js)
 │       └── account/        (account.php, account_controller.php, .css, .js)   # combines profile+settings
+├── pages/admin/            # ── ADMIN-FACING PAGES ──
+│   ├── home.php / home.css / home.js                    # dashboard: counts, status breakdown, recent reports
+│   ├── users/        (users.php, users_controller.php, .css, .js)      # all users, filter/search, suspend/reactivate, doctor verification
+│   ├── reports/      (reports.php, reports_controller.php, .css, .js)  # reply to patient/doctor support tickets
+│   └── account/      (account.php, account_controller.php, .css, .js) # combines profile+settings
 ├── shared/
 │   ├── tokens.css                  # ALL design tokens (colors, radii, spacing) — single source of truth
 │   ├── base.css                    # reset, body, scrollbar, scroll-entry animation system
@@ -74,8 +79,9 @@ KARE/
 │   ├── toast/       (toast.php, toast.css, toast.js)     # flash-message system (PRG pattern)
 │   ├── modal/       (modal.php, modal.css, modal.js)     # generic confirm-first dialog
 │   ├── user/        (sidebar.php, navbar.php)             # patient nav shell
-│   └── doctor/      (sidebar.php, navbar.php)             # doctor nav shell
-└── start_sandbox.sh                # Linux/bash dev-sandbox launcher (NOT for XAMPP/Windows — see §9)
+│   ├── doctor/      (sidebar.php, navbar.php)             # doctor nav shell
+│   └── admin/       (sidebar.php, navbar.php)             # admin nav shell
+└── start_sandbox.sh                # Linux/bash dev-sandbox launcher (NOT for XAMPP/Windows — see §10)
 ```
 
 ---
@@ -89,33 +95,35 @@ Apply migrations from `db/` **in this exact order** — each depends on tables/c
 3. `03_seed_states_districts.sql`
 4. `04_reports_and_meds.sql`
 5. `05_user_side_modules.sql`
+6. `06_admin_module.sql`
+7. `07_planned_additions.sql`
 
 ### 3.1 `users`
 
 The single accounts table for all three roles. Doctors and patients share this table; distinguished by `role`.
 
-| Column                      | Type                                                       | Notes                                                                                                |
-| --------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `id`                        | int, PK, AI                                                |                                                                                                      |
-| `name`                      | varchar(150)                                               |                                                                                                      |
-| `email`                     | varchar(255)                                               | unique                                                                                               |
-| `email_verified_at`         | datetime, null                                             | unused (no verification flow built)                                                                  |
-| `phone`                     | varchar(20), null                                          |                                                                                                      |
-| `phone_verified_at`         | datetime, null                                             | unused                                                                                               |
-| `state_id`                  | int, null, FK → `states.id`                                | patient address, `ON DELETE SET NULL`                                                                |
-| `district_id`               | int, null, FK → `districts.id`                             | patient address, `ON DELETE SET NULL`                                                                |
-| `notify_email`              | tinyint(1), default 1                                      | notification preference                                                                              |
-| `notify_sms`                | tinyint(1), default 0                                      | notification preference — **no SMS is actually sent**, preference only                               |
-| `specialty`                 | varchar(100), null                                         | **doctor-only** field (e.g. "Cardiologist")                                                          |
-| `password`                  | varchar(255)                                               | **PLAIN TEXT, not hashed** — deliberate academic-scope tradeoff, documented everywhere it's compared |
-| `role`                      | enum('patient','doctor','admin')                           | **no caretaker role exists**                                                                         |
-| `status`                    | enum('active','suspended','deactivated'), default 'active' | login blocked unless `active`                                                                        |
-| `is_verified`               | tinyint(1), default 1                                      |                                                                                                      |
-| `last_login_at`             | datetime, null                                             | unused (never written to)                                                                            |
-| `failed_login_attempts`     | tinyint unsigned, default 0                                | unused (no lockout logic built)                                                                      |
-| `locked_until`              | datetime, null                                             | unused                                                                                               |
-| `created_at` / `updated_at` | datetime                                                   | auto timestamps                                                                                      |
-| `deleted_at`                | datetime, null                                             | unused (no soft-delete logic built)                                                                  |
+| Column | Type | Notes |
+|---|---|---|
+| `id` | int, PK, AI | |
+| `name` | varchar(150) | |
+| `email` | varchar(255) | unique |
+| `email_verified_at` | datetime, null | unused (no verification flow built) |
+| `phone` | varchar(20), null | |
+| `phone_verified_at` | datetime, null | unused |
+| `state_id` | int, null, FK → `states.id` | patient address, `ON DELETE SET NULL` |
+| `district_id` | int, null, FK → `districts.id` | patient address, `ON DELETE SET NULL` |
+| `notify_email` | tinyint(1), default 1 | notification preference |
+| `notify_sms` | tinyint(1), default 0 | notification preference — **no SMS is actually sent**, preference only |
+| `specialty` | varchar(100), null | **doctor-only** field (e.g. "Cardiologist") |
+| `password` | varchar(255) | **PLAIN TEXT, not hashed** — deliberate academic-scope tradeoff, documented everywhere it's compared |
+| `role` | enum('patient','doctor','admin') | **no caretaker role exists** |
+| `status` | enum('active','suspended','deactivated'), default 'active' | login blocked unless `active` |
+| `is_verified` | tinyint(1), default 1 | |
+| `last_login_at` | datetime, null | unused (never written to) |
+| `failed_login_attempts` | tinyint unsigned, default 0 | unused (no lockout logic built) |
+| `locked_until` | datetime, null | unused |
+| `created_at` / `updated_at` | datetime | auto timestamps |
+| `deleted_at` | datetime, null | unused (no soft-delete logic built) |
 
 ### 3.2 `states` / `districts`
 
@@ -123,7 +131,6 @@ The single accounts table for all three roles. Doctors and patients share this t
 states(id PK, name)
 districts(id PK, state_id FK→states.id ON DELETE CASCADE, name)
 ```
-
 Seeded with 36 Indian states/UTs and 391 districts (not exhaustive for every state, but real place names). Used only by the patient profile's address fields.
 
 ### 3.3 `reports`
@@ -142,8 +149,7 @@ reports(
   created_at, updated_at
 )
 ```
-
-User-side submission is fully built. **Admin-side reply UI does not exist** — `admin_reply`/`replied_at` are schema-ready but nothing writes to them yet.
+User-side submission is fully built. **Admin-side reply is fully built** (`pages/admin/reports/`) — `admin_reply`/`replied_at` are now actively written to and displayed back on the patient's own report page.
 
 ### 3.4 Medicine reminder tables
 
@@ -164,11 +170,13 @@ dose_logs(
   id PK, schedule_id FK→medicine_schedules.id ON DELETE CASCADE,
   scheduled_for datetime,      -- the actual date+time this dose was due
   status enum('upcoming','taken','missed') default 'upcoming',
-  taken_at datetime null, created_at
+  taken_at datetime null,
+  snooze_count tinyint default 0,  -- capped at 3 by application logic (schedule_controller.php's snooze_dose)
+  created_at
 )
 ```
 
-**Important behavior:** `dose_logs` rows for _today_ are **not** pre-generated by a cron job — they're created lazily by `ensure_todays_dose_logs()` (see §5) whenever a patient visits their dashboard or schedule page. There is **no automated "missed" detection** — a dose only becomes `missed` if a human (patient or, read-only, doctor) marks it so, or the patient/doctor explicitly does. An overdue `upcoming` dose stays `upcoming` forever unless acted on.
+**Important behavior:** `dose_logs` rows for *today* are **not** pre-generated by a cron job — they're created lazily by `ensure_todays_dose_logs()` (see §5) whenever a patient visits their dashboard or schedule page. There is **no automated "missed" detection** — a dose only becomes `missed` if a human (patient or, read-only, doctor) marks it so, or the patient/doctor explicitly does. An overdue `upcoming` dose stays `upcoming` forever unless acted on. A patient can **snooze** an `upcoming` dose (pushes `scheduled_for` forward 15/30/60 min), capped at 3 times per dose via `snooze_count` — this is a manual, user-initiated action, not automated missed-detection.
 
 ### 3.5 `prescriptions`
 
@@ -181,7 +189,6 @@ prescriptions(
   uploaded_at datetime
 )
 ```
-
 Files: PDF/JPG/PNG, 2MB max, validated server-side. Stored at `assets/uploads/prescriptions/{user_id}/{32-hex-char-random}.{ext}` and served by **direct static link**, not an access-gated PHP script — the random filename is the only protection (see §7, Known Limitations). **No OCR/text-extraction** — files are stored as-is.
 
 ### 3.6 `doctor_connections`
@@ -214,8 +221,27 @@ messages(
   read_at datetime null            -- set when the recipient opens the thread; drives unread badges
 )
 ```
-
 Delivery is **polling-based** (client `fetch`s a JSON endpoint every 3s) — not WebSockets, not push.
+
+### 3.8 Admin — no new tables
+
+`06_admin_module.sql` adds **no schema** — it only seeds the first admin account (`id=201`, `admin@kare-demo.test`). The admin module reuses two columns that already existed but were unused before it was built:
+- `users.is_verified` — repurposed as the doctor-verification flag (toggled by admin, shown as a badge on doctor rows in `pages/admin/users/`)
+- `reports.admin_reply` / `reports.replied_at` — finally written to by `pages/admin/reports/`
+
+### 3.9 `doctor_patient_notes`
+
+```sql
+doctor_patient_notes(
+  id PK,
+  doctor_id FK→users.id ON DELETE CASCADE,
+  patient_id FK→users.id ON DELETE CASCADE,
+  note text,
+  updated_at datetime,
+  UNIQUE(doctor_id, patient_id)   -- one note per pair; save upserts, empty note deletes the row
+)
+```
+Private to the doctor — **never read anywhere on the patient side** (verified by grep + by loading every patient page with a note present and confirming zero occurrences of its content). Rendered as a collapsible panel per patient card on `pages/doctor/patients/`.
 
 ### Entity relationship summary
 
@@ -225,7 +251,8 @@ users (role=patient) ─┬─< medicines ─< medicine_schedules ─< dose_logs
                        ├─< reports (support tickets)
                        ├─(state_id/district_id)→ states/districts
                        └─< doctor_connections >─┬─ users (role=doctor)
-                                                 └─< messages
+                                                 ├─< messages
+                                                 └─< doctor_patient_notes (doctor-only, per patient)
 ```
 
 ---
@@ -234,12 +261,12 @@ users (role=patient) ─┬─< medicines ─< medicine_schedules ─< dose_logs
 
 Set once, only in `auth/login/controller.php`, on successful login:
 
-| Session key            | Meaning                        |
-| ---------------------- | ------------------------------ |
-| `$_SESSION['user_id']` | the user's `id`                |
-| `$_SESSION['name']`    | display name                   |
-| `$_SESSION['email']`   | email                          |
-| `$_SESSION['role']`    | `patient` / `doctor` / `admin` |
+| Session key | Meaning |
+|---|---|
+| `$_SESSION['user_id']` | the user's `id` |
+| `$_SESSION['name']` | display name |
+| `$_SESSION['email']` | email |
+| `$_SESSION['role']` | `patient` / `doctor` / `admin` |
 
 **Any page needing the logged-in user's identity must read these exact keys** — there is a documented history (see CHANGELOG §5) of a bug where pages read `user_name`/`user_email` instead and silently showed placeholder data. Don't reintroduce a second naming convention.
 
@@ -248,30 +275,28 @@ For anything beyond name/email, **re-query the `users` table by `user_id`** rath
 ### Login routing (role-based)
 
 `auth/login/controller.php`:
-
 - `role='patient'` → `pages/user/home.php`
 - `role='doctor'` → `pages/doctor/home.php`
-- `role='admin'` → **signed out immediately** with a toast ("admin portal isn't available yet") — there is no admin UI to send them to.
+- `role='admin'` → `pages/admin/home.php`
 
 ### Page-level guards
 
-- **Patient pages**: check `isset($_SESSION['user_id'])` only — redirect to login if not. They do **not** check `role`, so a doctor account _can_ technically browse patient URLs (harmless — data is scoped by `user_id` regardless of role, just semantically odd; not fixed, out of scope).
-- **Doctor pages**: use `require_role('doctor', $mrRootBase)` from `assets/helpers/auth.php`. This redirects a logged-out visitor to login, and a logged-in **patient** hitting a doctor URL back to their own patient home — not an error page. **Use this helper for any new role-specific page.**
+- **Patient pages**: check `isset($_SESSION['user_id'])` only — redirect to login if not. They do **not** check `role`, so a doctor/admin account *can* technically browse patient URLs (harmless — data is scoped by `user_id` regardless of role, just semantically odd; not fixed, out of scope).
+- **Doctor and admin pages**: use `require_role('doctor', $mrRootBase)` / `require_role('admin', $mrRootBase)` from `assets/helpers/auth.php`. This redirects a logged-out visitor to login, and a logged-in user of the *wrong* role to their own home — not an error page. **Use this helper for any new role-specific page.**
 
 ```php
 require_once __DIR__ . '/../../assets/helpers/auth.php';
-require_role('doctor', $mrRootBase); // or 'patient', or a new role if one is added
+require_role('admin', $mrRootBase); // or 'doctor', 'patient', or a new role if one is added
 ```
 
 ### `$mrRootBase` — depth-independent shared links
 
-`shared/user/sidebar.php`, `shared/user/navbar.php`, `shared/doctor/sidebar.php`, `shared/doctor/navbar.php` are included from pages at different folder depths. Each including page must set `$mrRootBase` to the relative path back to the project root **before** including these:
+`shared/user/sidebar.php`, `shared/user/navbar.php`, `shared/doctor/sidebar.php`, `shared/doctor/navbar.php`, `shared/admin/sidebar.php`, `shared/admin/navbar.php` are included from pages at different folder depths. Each including page must set `$mrRootBase` to the relative path back to the project root **before** including these:
 
 ```php
 $mrRootBase = '../../';      // e.g. pages/user/home.php            (2 levels to root)
 $mrRootBase = '../../../';   // e.g. pages/user/profile/profile.php (3 levels to root)
 ```
-
 Every link the sidebar/navbar build is `$mrRootBase . '...'`. Any new page nested deeper than `pages/user/{file}.php` or `pages/doctor/{file}.php` must set this correctly or navigation breaks silently (wrong relative links, not a crash — easy to miss).
 
 ---
@@ -281,7 +306,6 @@ Every link the sidebar/navbar build is `$mrRootBase . '...'`. Any new page neste
 ### PRG + Toast (every form submission)
 
 Every controller (`*_controller.php`) follows Post/Redirect/Get:
-
 ```php
 function back_with_toast(string $type, array $messages, array $old = []): void {
     $_SESSION['toast'] = ['type' => $type, 'messages' => $messages];
@@ -290,28 +314,22 @@ function back_with_toast(string $type, array $messages, array $old = []): void {
     exit;
 }
 ```
-
 The page includes `shared/toast/toast.php` once in the body; it reads+clears `$_SESSION['toast']` and renders it via `shared/toast/toast.js`'s `initFlashToasts()`.
 
 ### Shared confirm modal (any destructive/confirm-first action)
 
 `shared/modal/modal.php` (include once per page) + `shared/modal/modal.js`. Any button anywhere becomes a confirm-first action just by adding data attributes — **no changes to the modal files needed**:
-
 ```html
-<button
-  type="button"
-  data-mr-confirm
-  data-mr-confirm-action="controller.php?action=delete_x&id=5"
-  data-mr-confirm-method="post"
-  data-mr-confirm-title="Delete this?"
-  data-mr-confirm-message="This can't be undone."
-  data-mr-confirm-label="Delete"
-  data-mr-confirm-variant="danger"
->
-  Delete
+<button type="button" data-mr-confirm
+    data-mr-confirm-action="controller.php?action=delete_x&id=5"
+    data-mr-confirm-method="post"
+    data-mr-confirm-title="Delete this?"
+    data-mr-confirm-message="This can't be undone."
+    data-mr-confirm-label="Delete"
+    data-mr-confirm-variant="danger">
+    Delete
 </button>
 ```
-
 **Caveat:** the modal's hidden form only carries `action` + `method` — no room for extra POST fields. Workaround used throughout: pass IDs via **query string** on the action URL (`?action=x&id=5`), read them with `$_GET['id'] ?? $_POST['id'] ?? 0` in the controller. If a confirm-first action needs a text field (e.g. deactivate-account's password), build a **second custom overlay** reusing the same `.mr-modal-overlay`/`.mr-modal` CSS classes (see `pages/user/doctors/doctors.php`'s connect-request dialog for the pattern) rather than stretching the shared modal's contract.
 
 ### Auto-generating today's doses
@@ -320,18 +338,15 @@ The page includes `shared/toast/toast.php` once in the body; it reads+clears `$_
 require_once __DIR__ . '/../../assets/helpers/dose_logs.php';
 ensure_todays_dose_logs($con, $userId);
 ```
-
 Call this at the top of any page that reads a patient's today's-doses (dashboard, schedule). It backfills missing `dose_logs` rows for active schedules — idempotent, safe to call every page load.
 
 ### Ownership checks (mandatory on every write)
 
 Every controller re-verifies that the row being modified belongs to the acting user **server-side**, not just relying on the UI hiding the button. Pattern:
-
 ```php
 $stmt = mysqli_prepare($con, 'SELECT id FROM medicines WHERE id = ? AND user_id = ? LIMIT 1');
 // ... if 0 rows, reject before doing anything
 ```
-
 This has been verified by testing (not just written) for every module — see CHANGELOG for specific cross-user/cross-role attack tests that were run and blocked.
 
 ### File-per-feature convention
@@ -344,39 +359,59 @@ New feature = new folder under `pages/user/{feature}/` or `pages/doctor/{feature
 
 ### ✅ Completed — Patient side (`pages/user/`)
 
-| Module              | Files                                            | What it does                                                                |
-| ------------------- | ------------------------------------------------ | --------------------------------------------------------------------------- |
-| Auth                | `auth/login/`, `auth/signup/`, `auth/logout.php` | Signup, login (role-routed), logout                                         |
-| Dashboard           | `home.php`                                       | Real stats (doses due/taken/missed) + today's schedule from DB              |
-| Schedule            | `schedule/`                                      | Add/edit/delete medicines + reminder times; mark doses taken/missed         |
-| Profile             | `profile/`                                       | Edit name/email/phone/state/district; change password                       |
-| Report an Issue     | `report/`                                        | Submit support ticket; view own tickets + admin replies (once admin exists) |
-| Settings            | `settings/`                                      | Notification toggles; password-gated account deactivation                   |
-| Reports (analytics) | `reports.php`                                    | 30-day adherence rate, per-medicine breakdown, dose history                 |
-| Prescriptions       | `prescriptions/`                                 | Upload/view/delete PDF/JPG/PNG (2MB max)                                    |
-| Doctors             | `doctors/`                                       | Browse doctors, send/cancel connection requests                             |
-| Messages            | `messages/`                                      | Polling chat with accepted doctor connections                               |
-| Help & Search       | `help.php`, `search.php`                         | Static FAQ; search own medicines/prescriptions                              |
+| Module | Files | What it does |
+|---|---|---|
+| Auth | `auth/login/`, `auth/signup/`, `auth/logout.php` | Signup, login (role-routed), logout |
+| Dashboard | `home.php` | Real stats (doses due/taken/missed) + today's schedule from DB |
+| Schedule | `schedule/` | Add/edit/delete medicines + reminder times; mark doses taken/missed |
+| Profile | `profile/` | Edit name/email/phone/state/district; change password |
+| Report an Issue | `report/` | Submit support ticket; view own tickets + admin replies |
+| Settings | `settings/` | Notification toggles; password-gated account deactivation |
+| Reports (analytics) | `reports.php` | 30-day adherence rate, per-medicine breakdown, dose history |
+| Prescriptions | `prescriptions/` | Upload/view/delete PDF/JPG/PNG (2MB max) |
+| Doctors | `doctors/` | Browse doctors, send/cancel connection requests |
+| Messages | `messages/` | Polling chat with accepted doctor connections |
+| Help & Search | `help.php`, `search.php` | Static FAQ; search own medicines/prescriptions |
 
 ### ✅ Completed — Doctor side (`pages/doctor/`)
 
-| Module      | Files       | What it does                                                                     |
-| ----------- | ----------- | -------------------------------------------------------------------------------- |
-| Dashboard   | `home.php`  | Pending requests / active patients / unread messages stats                       |
-| Requests    | `requests/` | Accept/decline incoming connection requests                                      |
+| Module | Files | What it does |
+|---|---|---|
+| Dashboard | `home.php` | Pending requests / active patients / unread messages stats |
+| Requests | `requests/` | Accept/decline incoming connection requests |
 | My Patients | `patients/` | Connected patients, 30-day adherence badge, read-only today's-doses view, search |
-| Messages    | `messages/` | Same polling chat system, doctor-scoped                                          |
-| Account     | `account/`  | Combines profile + settings: details, password, notifications, deactivation      |
+| Messages | `messages/` | Same polling chat system, doctor-scoped |
+| Account | `account/` | Combines profile + settings: details, password, notifications, deactivation |
+
+### ✅ Completed — Admin side (`pages/admin/`)
+
+| Module | Files | What it does |
+|---|---|---|
+| Dashboard | `home.php` | Patient/doctor counts, open reports, unverified doctors, account-status breakdown, recent open reports |
+| Users | `users/` | All users, searchable/filterable by role+status; suspend/reactivate; doctor verification toggle. Admin can't change their own status here (routed to Account) |
+| Reports | `reports/` | Reply to support tickets (writes `admin_reply`/`replied_at`/`status`) — two-pane list/detail, filterable by status. Closes the loop with the patient-side "Report an Issue" flow |
+| Account | `account/` | Same shape as doctor's Account page, plus a safeguard blocking self-deactivation if it's the last active admin |
+
+### ✅ Completed — Small approved additions (README §12 / CHANGELOG §21)
+
+| Feature | Where | What it does |
+|---|---|---|
+| Message "seen" indicator | `pages/user/messages/`, `pages/doctor/messages/` | Shows "Seen" under the sender's last message once the recipient has opened the thread (reuses `messages.read_at`) |
+| "Remember me" on login | `auth/login/` | 30-day session cookie when checked, ordinary session cookie otherwise |
+| Snooze a dose | `pages/user/schedule/` | Push an `upcoming` dose 15/30/60 min, capped at 3 times (`dose_logs.snooze_count`) |
+| Calendar view of dose history | `pages/user/reports.php` | Table/Calendar toggle; month grid with prev/next navigation, color-coded per-day dots |
+| Private notes on a patient | `pages/doctor/patients/` | Doctor-only free-text note per connected patient (`doctor_patient_notes` table), never visible to the patient |
 
 ### ❌ Not built (pending)
 
-| Item                     | Notes                                                                                                                                                                                                                                                                                                         |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Admin module**         | Nothing exists — no user management, no doctor verification, no system health view, no UI to reply to `reports` rows. `auth/login/controller.php` currently signs an admin login out with a toast rather than routing anywhere. **This is the largest remaining piece.**                                      |
-| **Email/SMS sending**    | `notify_email`/`notify_sms` preferences are collected and saved but **nothing sends anything** — no PHPMailer, no Twilio/Fast2SMS integration                                                                                                                                                                 |
-| **Missed-dose cron job** | No scheduled task exists; `dose_logs.status` only changes via explicit human action                                                                                                                                                                                                                           |
-| **Prescription OCR**     | Files are stored as opaque blobs; no text extraction                                                                                                                                                                                                                                                          |
-| **Caretaker role**       | `users.role` enum has no caretaker value; a caretaker-manages-multiple-patients relationship would need a new table (there's a documented historical decision to _remove_ a "My Patients" nav item from the patient sidebar because it didn't correspond to anything the schema supports — see CHANGELOG §18) |
+| Item | Notes |
+|---|---|
+| **Email/SMS sending** | `notify_email`/`notify_sms` preferences are collected and saved on all three sides (patient/doctor/admin) but **nothing sends anything** — no PHPMailer, no Twilio/Fast2SMS integration |
+| **Missed-dose cron job** | No scheduled task exists; `dose_logs.status` only changes via explicit human action (including the snooze feature above, which is manual, not automated detection) |
+| **Prescription OCR** | Files are stored as opaque blobs; no text extraction |
+| **Caretaker role** | `users.role` enum has no caretaker value; a caretaker-manages-multiple-patients relationship would need a new table (there's a documented historical decision to *remove* a "My Patients" nav item from the patient sidebar because it didn't correspond to anything the schema supports — see CHANGELOG §18) |
+
+The five small features previously listed here (§12) are done — see the "Small approved additions" table above.
 
 **Explicitly out of scope for this project, by design — not pending, not a gap to fill:** password hashing, file-access gating/streaming, and equivalent security hardening. See §7.
 
@@ -410,14 +445,15 @@ These are separate from §7 — general scope/complexity tradeoffs worth knowing
 
 Seeded by the migration files — safe to use for manual testing:
 
-| Email                         | Password     | Role                       |
-| ----------------------------- | ------------ | -------------------------- |
-| `govindmanoj333@gmail.com`    | `12345677`   | patient                    |
-| `testpatient@example.com`     | `test1234`   | patient                    |
-| `kohai79941@gmail.com`        | `12341234`   | patient                    |
+| Email | Password | Role |
+|---|---|---|
+| `govindmanoj333@gmail.com` | `12345677` | patient |
+| `testpatient@example.com` | `test1234` | patient |
+| `kohai79941@gmail.com` | `12341234` | patient |
 | `anjali.menon@kare-demo.test` | `doctor1234` | doctor (General Physician) |
-| `rahul.nair@kare-demo.test`   | `doctor1234` | doctor (Cardiologist)      |
-| `sara.thomas@kare-demo.test`  | `doctor1234` | doctor (Endocrinologist)   |
+| `rahul.nair@kare-demo.test` | `doctor1234` | doctor (Cardiologist) |
+| `sara.thomas@kare-demo.test` | `doctor1234` | doctor (Endocrinologist) |
+| `admin@kare-demo.test` | `admin1234` | admin |
 
 Freshly-migrated accounts have **no medicines/dose history/connections** seeded — that demo data was only ever created ad hoc during testing, not shipped in the SQL files. To see the app with real data, either use it manually (add a medicine, connect to a doctor) or write your own seed SQL.
 
@@ -436,10 +472,12 @@ Freshly-migrated accounts have **no medicines/dose history/connections** seeded 
    "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\03_seed_states_districts.sql
    "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\04_reports_and_meds.sql
    "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\05_user_side_modules.sql
+   "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\06_admin_module.sql
+   "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\07_planned_additions.sql
    ```
    (No `-p` — XAMPP's default root user has no password, matching `assets/connection/Connection.php`'s hardcoded `root`/empty-password/`db_kare` config.)
 4. Verify: `SHOW TABLES;` should list 10 tables (`users`, `states`, `districts`, `reports`, `medicines`, `medicine_schedules`, `dose_logs`, `prescriptions`, `doctor_connections`, `messages`).
-5. Browse to `http://localhost/KARE/auth/login/index.php`
+5. Browse to `http://localhost/KARE/auth/login/index.php` — log in as any of the accounts in §9, including `admin@kare-demo.test` for the admin portal at `pages/admin/`.
 
 `start_sandbox.sh` at the project root is a **bash script for a Linux dev sandbox** (used during development to spin up MariaDB + PHP's built-in server from scratch) — it does not apply to XAMPP/Windows and can be ignored or deleted.
 
@@ -448,51 +486,29 @@ Freshly-migrated accounts have **no medicines/dose history/connections** seeded 
 ## 11. Guidance for Continued Development (for other agents/models)
 
 1. **Read `assets/design.md` before writing any new UI** — it defines the exact color/radius/spacing/typography tokens and the checklist every new page must follow (CSS load order, `$activePage`, `$mrRootBase`, session key usage, toast/modal inclusion, scroll-entry animation attributes). It is the single source of truth for visual consistency.
-2. **Read `assets/CHANGELOG.md`** for the _why_ behind non-obvious decisions — several sections document bugs that were found and fixed (e.g. session key mismatches, folder-restructure path breakage) specifically so they aren't reintroduced.
-3. **The most impactful next module is the Admin portal** — it's the only piece with zero implementation, and it's what closes the loop on the already-built "Report an Issue" flow (`reports.admin_reply`/`replied_at` columns exist and are waiting) and would let `role='admin'` logins actually go somewhere instead of being signed out.
-4. When adding any new page: follow the folder-per-feature + PRG/toast + ownership-check conventions in §5 exactly — every existing module does, and deviating creates inconsistency an agent reading the codebase later won't expect.
-5. **Test by actually running the app**, not just reading the code — every module in this project was verified via curl/browser against a live PHP+MySQL server, including deliberately trying cross-user and cross-role access to confirm ownership checks actually reject them. The CHANGELOG documents these tests; new modules should get the same treatment before being considered done.
+2. **Read `assets/CHANGELOG.md`** for the *why* behind non-obvious decisions — several sections document bugs that were found and fixed (e.g. session key mismatches, folder-restructure path breakage) specifically so they aren't reintroduced.
+3. **All three portals (patient, doctor, admin) are functionally complete, and all five small approved additions (§12) are built.** What's left is the larger not-yet-built items in §6's pending table (email/SMS sending, missed-dose cron, prescription OCR, a caretaker role) — none of which has existing UI scaffolding the way the admin module or the §12 additions did, so expect more schema/design work up front for any of those.
+4. When adding any new page: follow the folder-per-feature + PRG/toast + ownership-check conventions in §5 exactly — every existing module does, and deviating creates inconsistency an agent reading the codebase later won't expect. For a new *role-specific* area (a 4th role, say), mirror `pages/admin/` + `shared/admin/` + the `require_role()` pattern in §4 rather than inventing a new guard mechanism.
+5. **Test by actually running the app**, not just reading the code — every module in this project was verified via curl/browser against a live PHP+MySQL server, including deliberately trying cross-user and cross-role access to confirm ownership checks actually reject them (e.g. the admin module's "can't suspend yourself" and "can't deactivate the last admin" checks were both verified to actually fire, not just assumed to work). CHANGELOG §22 documents a dedicated edge-case sweep (empty states, malformed input, XSS payloads, upload limits, boundary conditions) beyond just the individual feature tests — worth doing the same for any new work rather than only testing the happy path.
 
 ---
 
-## 12. Planned Additions (approved, not yet built)
+## 12. Small Additions — Implementation Notes (all built, CHANGELOG §21)
 
-The following small features have been scoped and approved for future work. None require new security infrastructure (see §7) — they're all straightforward extensions of the existing tables/patterns. Listed in a reasonable build order (schema-only changes first).
+These five features were scoped here as a plan and are now fully implemented and tested (see CHANGELOG §21 for the test details). Kept as an as-built reference for the actual code locations and any deviations from the original plan.
 
-### 12.1 "Remember me" on login
+### 12.1 "Remember me" on login — as built
+`auth/login/index.php` has a `remember_me` checkbox; `auth/login/controller.php` reads `$_POST['remember_me']` and calls `session_set_cookie_params(60*60*24*30)` **before** `session_start()` when checked (order matters — cookie params can't be changed after the session starts). No DB change.
 
-**Effort: trivial.** Extend the PHP session cookie lifetime when a "Remember me" checkbox is ticked on `auth/login/index.php`. No DB change needed — adjust `session_set_cookie_params()` (or the cookie lifetime param) in `auth/login/controller.php` before `session_start()`, conditional on `$_POST['remember_me']`.
+### 12.2 Snooze a dose — as built
+`snooze_dose` action in `pages/user/schedule/schedule_controller.php`. Requires `status = 'upcoming'` and `snooze_count < 3`; on success, `scheduled_for = scheduled_for + INTERVAL ? MINUTE` and `snooze_count` increments. UI: a `<select>` (15/30/60 min) + button next to the existing Taken/Missed buttons, hidden once `snooze_count` reaches 3. Required the `dose_logs.snooze_count` column added in `07_planned_additions.sql`.
 
-### 12.2 Snooze a dose
+### 12.3 Calendar view of dose history — as built
+`pages/user/reports.php` gained a Table/Calendar toggle (`data-mr-view-btn`/`data-mr-view-panel`, plain JS show/hide, no framework). The calendar queries `dose_logs` grouped by `DATE(scheduled_for)` and status for the month in `?month=YYYY-MM` (defaults to current month, falls back to current month on invalid input — regex-validated as `\d{4}-\d{2}`). Rendered as a 7-column grid with leading empty cells for the month's starting weekday, colored dots per status, today's cell outlined. No new table.
 
-**Effort: small.** Patient-side, on `pages/user/schedule/schedule.php` (and optionally the dashboard's today's-schedule table). Add a "Snooze" button next to the existing Taken/Missed buttons on an `upcoming` dose.
+### 12.4 Private notes on a patient — as built
+New `doctor_patient_notes` table (`07_planned_additions.sql`), `UNIQUE(doctor_id, patient_id)` so saving is an `INSERT ... ON DUPLICATE KEY UPDATE` upsert. `save_note` action added to the existing `pages/doctor/patients/patients_controller.php` (not a separate controller file as originally sketched — kept everything patient-card-related in one file). Ownership check requires an `accepted` `doctor_connections` row between the acting doctor and the target patient. Submitting an empty note **deletes** the row rather than storing blank text. Collapsible panel per patient card, toggled the same way as the existing "Today's doses" panel. Verified with a grep sweep that no patient-facing file references this table at all.
 
-- **No new table.** Add a new action `snooze_dose` to `schedule_controller.php`: takes `dose_log_id` + a snooze duration (15/30/60 min), does `UPDATE dose_logs SET scheduled_for = scheduled_for + INTERVAL ? MINUTE WHERE id = ? AND status = 'upcoming'` (with the same ownership check pattern already used by `mark_dose`).
-- Consider capping snoozes (e.g. a `snooze_count` column on `dose_logs`, default 0, incremented each time, capped at 3) so a dose can't be pushed forever — optional, decide when building.
+### 12.5 Message "seen" indicator — as built
+`read_at` added to the message `SELECT`s in both `pages/user/messages/messages.php` and `pages/doctor/messages/messages.php` (previously fetched but not selected). A "Seen" checkmark renders under the sender's own **last** message in the thread only, when `read_at IS NOT NULL`. **Known simplification:** this is computed server-side on page load only — `messages_poll.php`'s live-append via `fetch` does not retroactively add the indicator to an already-rendered bubble when the other party reads it without the page reloading, since read-marking itself happens on page load, not via polling. Acceptable for this project's scope; flagged here for whoever extends the polling logic next.
 
-### 12.3 Calendar view of dose history
-
-**Effort: medium.** Patient-side, alternate view on `pages/user/reports.php` (toggle between the existing table and a calendar) — no new page needed, reuses the exact same `dose_logs` query already there, just re-renders it grouped by date into a month grid instead of a flat table. Pure front-end/PHP templating change; no DB or controller work.
-
-### 12.4 Private notes on a patient
-
-**Effort: small.** Doctor-side, on `pages/doctor/patients/patients.php` — a doctor-only free-text note per connected patient (never visible to the patient).
-
-- **New table:**
-  ```sql
-  doctor_patient_notes(
-    id PK,
-    doctor_id FK→users.id ON DELETE CASCADE,
-    patient_id FK→users.id ON DELETE CASCADE,
-    note text,
-    updated_at datetime,
-    UNIQUE(doctor_id, patient_id)   -- one note per doctor-patient pair, upsert on save
-  )
-  ```
-- Add a `notes_controller.php` action (`save_note`) in `pages/doctor/patients/`, following the same ownership-check + PRG pattern as everything else. Render as a collapsible textarea on each patient card, same interaction style as the existing "Today's doses" toggle (`data-mr-toggle-today` in `patients.js`).
-
-### 12.5 Message "seen" indicator
-
-**Effort: trivial.** No schema change — `messages.read_at` already exists and is already set when a thread is opened (§3.7, §16 in CHANGELOG). Just surface it in the UI: in both `pages/user/messages/messages.php` and `pages/doctor/messages/messages.php`, on the sender's own (`is-mine`) bubbles, show a small "Seen" label/checkmark under the most recent message **if** `read_at IS NOT NULL` on that message. Requires selecting `read_at` in the existing message queries (currently not selected) and passing it through to the bubble template + `messages_poll.php`'s JSON response for live updates.
-
-**Suggested build order:** 12.5 → 12.1 → 12.2 → 12.3 → 12.4 (roughly cheapest/most isolated first; 12.4 is the only one needing a new table).

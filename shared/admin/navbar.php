@@ -1,0 +1,101 @@
+<?php
+
+/**
+ * shared/admin/navbar.php
+ * -----------------------------------------------------------------------
+ * Top navbar for the admin-facing area. Mirrors shared/doctor/navbar.php:
+ * search (scoped to users here) + avatar popover with Account + Log out.
+ * -----------------------------------------------------------------------
+ */
+
+if (!isset($currentUser)) {
+    $currentUser = [
+        'name'  => $_SESSION['name']  ?? 'Admin',
+        'email' => $_SESSION['email'] ?? '',
+        'avatar' => null,
+    ];
+}
+
+$mrInitial = strtoupper(substr(trim($currentUser['name']), 0, 1) ?: 'A');
+
+if (!isset($mrRootBase)) {
+    $mrRootBase = '../../';
+}
+?>
+<header class="mr-navbar">
+    <button type="button" class="mr-sidebar-toggle" data-mr-sidebar-toggle aria-label="Toggle navigation">
+        <i class="ph ph-list"></i>
+    </button>
+
+    <form class="mr-search" action="<?= htmlspecialchars($mrRootBase . 'pages/admin/users/users.php') ?>" method="get" role="search">
+        <i class="ph ph-magnifying-glass"></i>
+        <input
+            type="search"
+            name="q"
+            placeholder="Search users"
+            autocomplete="off">
+    </form>
+
+    <div class="mr-navbar-spacer"></div>
+
+    <div class="mr-navbar-actions">
+        <div class="mr-avatar-wrap" data-mr-avatar-wrap>
+            <button
+                type="button"
+                class="mr-avatar-btn"
+                data-mr-avatar-btn
+                aria-haspopup="true"
+                aria-expanded="false">
+                <?php if (!empty($currentUser['avatar'])): ?>
+                    <img class="mr-avatar-img" src="<?= htmlspecialchars($currentUser['avatar']) ?>" alt="">
+                <?php else: ?>
+                    <span class="mr-avatar-initial">
+                        <?= htmlspecialchars($mrInitial) ?>
+                    </span>
+                <?php endif; ?>
+                <i class="ph ph-caret-down mr-caret"></i>
+            </button>
+
+            <div class="mr-popover" role="menu">
+                <div class="mr-popover-header">
+                    <?php if (!empty($currentUser['avatar'])): ?>
+                        <img class="mr-avatar-img" src="<?= htmlspecialchars($currentUser['avatar']) ?>" alt="">
+                    <?php else: ?>
+                        <span class="mr-avatar-initial mr-avatar-initial--lg">
+                            <?= htmlspecialchars($mrInitial) ?>
+                        </span>
+                    <?php endif; ?>
+                    <div>
+                        <div class="mr-popover-name"><?= htmlspecialchars($currentUser['name']) ?></div>
+                        <?php if (!empty($currentUser['email'])): ?>
+                            <div class="mr-popover-email"><?= htmlspecialchars($currentUser['email']) ?></div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="mr-popover-divider"></div>
+
+                <a href="<?= htmlspecialchars($mrRootBase . 'pages/admin/account/account.php') ?>" class="mr-popover-item" role="menuitem">
+                    <i class="ph ph-gear-six"></i> Account
+                </a>
+
+                <div class="mr-popover-divider"></div>
+
+                <button
+                    type="button"
+                    class="mr-popover-item is-danger"
+                    role="menuitem"
+                    data-mr-confirm
+                    data-mr-confirm-action="<?= htmlspecialchars($mrRootBase . 'auth/logout.php') ?>"
+                    data-mr-confirm-method="post"
+                    data-mr-confirm-title="Log out of Kare?"
+                    data-mr-confirm-message="You'll need to sign in again to access the admin portal."
+                    data-mr-confirm-label="Log out"
+                    data-mr-confirm-icon="ph-sign-out"
+                    data-mr-confirm-variant="danger">
+                    <i class="ph ph-sign-out"></i> Log out
+                </button>
+            </div>
+        </div>
+    </div>
+</header>

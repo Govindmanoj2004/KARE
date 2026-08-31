@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Kare — Doctor Patients Page Styles
+   Kare — Admin Dashboard Styles
    ========================================================================== */
 
 .mr-layout-header {
@@ -54,6 +54,24 @@
   box-shadow: var(--shadow-card);
 }
 
+.mr-card-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.mr-card-heading {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.mr-card-link {
+  font-size: var(--text-sm);
+  color: var(--accent-text);
+  font-weight: 500;
+}
+
 .mr-schedule-empty {
   display: flex;
   flex-direction: column;
@@ -71,70 +89,41 @@
 }
 
 /* =========================================================================
-   PATIENT CARDS
+   ACCOUNT STATUS BREAKDOWN
    ========================================================================= */
 
-.mr-patient-list {
+.mr-status-breakdown {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.mr-patient-card {
-  border: 1px solid rgb(51 46 46 / 10%);
-  border-radius: var(--radius-control, 14px);
-  padding: 18px 20px;
-}
-
-.mr-patient-card-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  gap: 24px;
   flex-wrap: wrap;
 }
 
-.mr-request-avatar {
-  width: 44px;
-  height: 44px;
-  font-size: var(--text-sm);
-  flex-shrink: 0;
+.mr-status-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* =========================================================================
+   REQUEST-STYLE PREVIEW LIST (reused visual language from doctor dashboard)
+   ========================================================================= */
+
+.mr-request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mr-request-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid rgb(51 46 46 / 10%);
+  border-radius: var(--radius-control, 14px);
+  padding: 14px 18px;
 }
 
 .mr-request-main {
   flex: 1;
-  min-width: 160px;
-}
-
-.mr-patient-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 14px;
-  flex-wrap: wrap;
-}
-
-.mr-patient-today {
-  margin-top: 16px;
-}
-
-.mr-patient-today .mr-table {
-  font-size: var(--text-sm);
-}
-
-.mr-patient-notes {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid rgb(51 46 46 / 8%);
-}
-
-.mr-patient-notes .mr-textarea {
-  resize: vertical;
-  min-height: 70px;
-  font-family: inherit;
-}
-
-.mr-patient-notes .mr-form-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 10px;
+  min-width: 0;
 }

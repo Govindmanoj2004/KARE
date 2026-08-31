@@ -1,9 +1,9 @@
 /**
- * Kare schedule page behaviour.
- * Handles: avatar popover, mobile sidebar toggle, scroll-entry animations
- * (same shell boilerplate as report.js), plus this page's own bits:
- *   - adding/removing reminder-time rows in the medicine form
- *   - "Edit" pre-filling the form to update an existing medicine
+ * Kare settings page behaviour.
+ * Same shell boilerplate as schedule.js, plus a plain confirm() safeguard
+ * on the deactivate-account form (it already requires re-entering the
+ * password, so a native confirm is enough — no need to stretch the
+ * shared modal, whose hidden form has no room for a password field).
  */
 document.addEventListener("DOMContentLoaded", function () {
   // ===================================================================
@@ -80,12 +80,8 @@ document.addEventListener("DOMContentLoaded", function () {
           }
         });
       },
-      {
-        threshold: 0.1,
-        rootMargin: "0px 0px -40px 0px",
-      },
+      { threshold: 0.1, rootMargin: "0px 0px -40px 0px" },
     );
-
     scrollEntries.forEach(function (el) {
       observer.observe(el);
     });
@@ -96,30 +92,18 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ===================================================================
-  // Today's-doses toggle per patient card
+  // Deactivate account — confirm before submitting
   // ===================================================================
 
-  document.querySelectorAll("[data-mr-toggle-today]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var panel = btn.closest(".mr-patient-card").querySelector("[data-mr-today-panel]");
-      if (!panel) return;
-      panel.hidden = !panel.hidden;
-    });
-  });
-
-  // ===================================================================
-  // Notes toggle per patient card
-  // ===================================================================
-
-  document.querySelectorAll("[data-mr-toggle-notes]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var panel = btn.closest(".mr-patient-card").querySelector("[data-mr-notes-panel]");
-      if (!panel) return;
-      panel.hidden = !panel.hidden;
-      if (!panel.hidden) {
-        var textarea = panel.querySelector("textarea");
-        if (textarea) textarea.focus();
+  var deactivateForm = document.querySelector("[data-mr-deactivate-form]");
+  if (deactivateForm) {
+    deactivateForm.addEventListener("submit", function (e) {
+      var ok = window.confirm(
+        "Deactivate your account? You'll be signed out immediately and won't be able to log back in until support reactivates it.",
+      );
+      if (!ok) {
+        e.preventDefault();
       }
     });
-  });
+  }
 });

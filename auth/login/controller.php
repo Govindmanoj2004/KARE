@@ -1,4 +1,13 @@
 <?php
+// "Remember me" must be read and applied to the session cookie's
+// lifetime *before* session_start() — $_POST is already populated by
+// PHP at this point regardless, so this is safe to check first.
+$mrRememberMe = !empty($_POST['remember_me']);
+if ($mrRememberMe) {
+    // 30 days. Unchecked leaves PHP's default (session cookie — expires
+    // when the browser closes), same as before this feature existed.
+    session_set_cookie_params(60 * 60 * 24 * 30);
+}
 session_start();
 require_once __DIR__ . '/../../assets/connection/Connection.php';
 
@@ -68,12 +77,7 @@ if ($user['role'] === 'doctor') {
 }
 
 if ($user['role'] === 'admin') {
-    // No admin portal built yet — sign out rather than dropping an admin
-    // into the patient dashboard as if they were a patient.
-    session_destroy();
-    session_start();
-    $_SESSION['toast'] = ['type' => 'warning', 'messages' => ['The admin portal isn\'t available yet.']];
-    header('Location: index.php');
+    header('Location: ../../pages/admin/home.php');
     exit;
 }
 

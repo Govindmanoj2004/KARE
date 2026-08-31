@@ -98,4 +98,23 @@ document.addEventListener("DOMContentLoaded", function () {
       el.classList.add("is-visible");
     });
   }
+
+  // ===================================================================
+  // Table / Calendar view toggle
+  // ===================================================================
+
+  var viewButtons = document.querySelectorAll("[data-mr-view-btn]");
+  viewButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var target = btn.dataset.mrViewBtn;
+
+      viewButtons.forEach(function (b) {
+        b.classList.toggle("is-active", b === btn);
+      });
+
+      document.querySelectorAll("[data-mr-view-panel]").forEach(function (panel) {
+        panel.hidden = panel.dataset.mrViewPanel !== target;
+      });
+    });
+  });
 });

@@ -161,6 +161,25 @@
   background: rgb(224 67 63 / 20%);
 }
 
+.mr-dose-btn.is-snooze-btn {
+  background: var(--status-upcoming-bg, rgb(85 172 238 / 14%));
+  color: var(--status-upcoming-color, #226699);
+}
+
+.mr-dose-btn.is-snooze-btn:hover {
+  background: rgb(85 172 238 / 22%);
+}
+
+.mr-snooze-select {
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid rgb(51 46 46 / 12%);
+  background: var(--surface);
+  font-size: var(--text-xs);
+  padding: 0 6px;
+  cursor: pointer;
+}
+
 .mr-dose-btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 4px var(--accent-glow);

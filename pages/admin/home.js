@@ -1,11 +1,11 @@
 /**
- * Kare schedule page behaviour.
- * Handles: avatar popover, mobile sidebar toggle, scroll-entry animations
- * (same shell boilerplate as report.js), plus this page's own bits:
- *   - adding/removing reminder-time rows in the medicine form
- *   - "Edit" pre-filling the form to update an existing medicine
+ * MediRemind dashboard shell behaviour.
+ * Handles: avatar popover open/close, mobile sidebar toggle,
+ * click-outside + Escape to close, basic keyboard accessibility,
+ * and IntersectionObserver-based scroll-entry animations.
  */
 document.addEventListener("DOMContentLoaded", function () {
+
   // ===================================================================
   // Avatar Popover
   // ===================================================================
@@ -65,8 +65,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ===================================================================
-  // Scroll-Entry Animations
+  // Scroll-Entry Animations (IntersectionObserver)
   // ===================================================================
+  // Elements with [data-mr-scroll-entry] start at opacity:0 + translateY(12px)
+  // and resolve to their final state when entering the viewport.
+  // Staggered delays are set via --index CSS variable on each element.
 
   var scrollEntries = document.querySelectorAll("[data-mr-scroll-entry]");
 
@@ -90,36 +93,9 @@ document.addEventListener("DOMContentLoaded", function () {
       observer.observe(el);
     });
   } else {
+    // Fallback: if IntersectionObserver is not supported, show everything
     scrollEntries.forEach(function (el) {
       el.classList.add("is-visible");
     });
   }
-
-  // ===================================================================
-  // Today's-doses toggle per patient card
-  // ===================================================================
-
-  document.querySelectorAll("[data-mr-toggle-today]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var panel = btn.closest(".mr-patient-card").querySelector("[data-mr-today-panel]");
-      if (!panel) return;
-      panel.hidden = !panel.hidden;
-    });
-  });
-
-  // ===================================================================
-  // Notes toggle per patient card
-  // ===================================================================
-
-  document.querySelectorAll("[data-mr-toggle-notes]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var panel = btn.closest(".mr-patient-card").querySelector("[data-mr-notes-panel]");
-      if (!panel) return;
-      panel.hidden = !panel.hidden;
-      if (!panel.hidden) {
-        var textarea = panel.querySelector("textarea");
-        if (textarea) textarea.focus();
-      }
-    });
-  });
 });

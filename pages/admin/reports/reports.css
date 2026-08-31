@@ -1,0 +1,205 @@
+/* ==========================================================================
+   Kare — Admin Reports Page Styles
+   ========================================================================== */
+
+.mr-layout-header {
+  position: relative;
+  overflow: hidden;
+  padding: 40px 40px 120px;
+}
+
+.mr-layout-header::before {
+  content: "";
+  position: absolute;
+  bottom: -420vw;
+  left: 50%;
+  translate: -50% 0;
+  width: 500vw;
+  height: 500vw;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.16;
+}
+
+.mr-layout-header-row {
+  position: relative;
+  z-index: 1;
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+.mr-layout-header-heading {
+  font-size: var(--text-xl);
+  font-weight: 400;
+}
+
+.mr-layout-header-heading strong {
+  font-weight: 600;
+}
+
+.mr-layout-header-sub {
+  font-size: var(--text-base);
+  color: rgb(51 46 46 / 65%);
+  margin-top: 6px;
+}
+
+.mr-layout-card.mr-reports-card {
+  position: relative;
+  z-index: 2;
+  max-width: var(--content-max);
+  margin: -100px auto 40px;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 24px 0 0;
+  overflow: hidden;
+}
+
+.mr-schedule-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 20px;
+  color: rgb(51 46 46 / 55%);
+  text-align: center;
+}
+
+.mr-schedule-empty i {
+  font-size: 32px;
+  color: var(--accent);
+  opacity: 0.6;
+}
+
+/* =========================================================================
+   STATUS FILTER PILLS
+   ========================================================================= */
+
+.mr-filter-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 32px 20px;
+  flex-wrap: wrap;
+}
+
+.mr-filter-pill {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--surface-inset);
+}
+
+.mr-filter-pill.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* =========================================================================
+   TWO-PANE LAYOUT
+   ========================================================================= */
+
+.mr-reports-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 480px;
+  border-top: 1px solid var(--border);
+}
+
+.mr-report-list {
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  max-height: 640px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mr-report-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-control, 14px);
+  transition: background-color var(--ease-transform, 0.15s ease);
+}
+
+.mr-report-item:hover {
+  background: var(--hover-tint);
+}
+
+.mr-report-item.is-active {
+  background: var(--accent-bg);
+}
+
+.mr-report-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mr-report-subject {
+  font-weight: 600;
+  font-size: var(--text-base);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mr-report-detail {
+  padding: 24px 32px 32px;
+}
+
+.mr-report-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.mr-report-message {
+  background: var(--surface-raised);
+  border-radius: var(--radius-control, 14px);
+  padding: 16px 18px;
+  font-size: var(--text-base);
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+.mr-report-reply-existing {
+  border-left: 3px solid var(--accent);
+  padding: 4px 0 4px 16px;
+  margin-bottom: 24px;
+}
+
+.mr-report-reply-existing p {
+  margin: 6px 0 0;
+  font-size: var(--text-base);
+  line-height: 1.6;
+}
+
+.mr-reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mr-textarea {
+  resize: vertical;
+  min-height: 90px;
+  font-family: inherit;
+}
+
+@media (max-width: 780px) {
+  .mr-reports-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .mr-report-list {
+    display: none;
+  }
+}

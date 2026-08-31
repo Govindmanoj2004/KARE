@@ -196,6 +196,21 @@
   color: var(--text-muted);
   margin-top: 4px;
   text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.mr-bubble-seen {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--accent-text);
+}
+
+.mr-bubble-seen i {
+  font-size: 13px;
 }
 
 .mr-thread-composer {

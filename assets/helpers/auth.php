@@ -22,6 +22,7 @@ function require_role(string $role, string $rootBase): void
         $home = match ($_SESSION['role'] ?? '') {
             'doctor' => $rootBase . 'pages/doctor/home.php',
             'patient' => $rootBase . 'pages/user/home.php',
+            'admin' => $rootBase . 'pages/admin/home.php',
             default => $rootBase . 'auth/login/index.php',
         };
         header('Location: ' . $home);

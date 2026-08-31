@@ -62,8 +62,7 @@ mysqli_stmt_close($stmt);
 // --- Per-patient adherence (last 30 days) + today's doses --------------------
 // Small doctor patient-lists make N+1 queries here an acceptable
 // tradeoff for readability at this project's scope.
-foreach ($patients as &$p) {
-    $adherenceStmt = mysqli_prepare($con, "
+foreach ($patients as &$p) {    $adherenceStmt = mysqli_prepare($con, "
         SELECT SUM(dl.status = 'taken') AS taken, SUM(dl.status = 'missed') AS missed
         FROM dose_logs dl
         JOIN medicine_schedules ms ON ms.id = dl.schedule_id
@@ -95,6 +94,15 @@ foreach ($patients as &$p) {
         $p['today'][] = $row;
     }
     mysqli_stmt_close($todayStmt);
+
+    // Private note this doctor has on this patient (never shown to the patient).
+    $noteStmt = mysqli_prepare($con, 'SELECT note, updated_at FROM doctor_patient_notes WHERE doctor_id = ? AND patient_id = ? LIMIT 1');
+    mysqli_stmt_bind_param($noteStmt, 'ii', $doctorId, $p['patient_id']);
+    mysqli_stmt_execute($noteStmt);
+    $noteRow = mysqli_fetch_assoc(mysqli_stmt_get_result($noteStmt));
+    mysqli_stmt_close($noteStmt);
+    $p['note'] = $noteRow['note'] ?? '';
+    $p['note_updated_at'] = $noteRow['updated_at'] ?? null;
 }
 unset($p);
 
@@ -182,6 +190,9 @@ $statusLabels = [
                                         <button type="button" class="mr-btn-secondary" data-mr-toggle-today>
                                             <i class="ph ph-calendar-check"></i> Today's doses
                                         </button>
+                                        <button type="button" class="mr-btn-secondary" data-mr-toggle-notes>
+                                            <i class="ph ph-note-pencil"></i> Notes<?= $p['note'] !== '' ? ' •' : '' ?>
+                                        </button>
                                         <a class="mr-btn-secondary" href="../messages/messages.php?connection_id=<?= (int) $p['connection_id'] ?>">
                                             <i class="ph ph-chat-circle-dots"></i> Message
                                         </a>
@@ -222,6 +233,21 @@ $statusLabels = [
                                                 </tbody>
                                             </table>
                                         <?php endif; ?>
+                                    </div>
+
+                                    <div class="mr-patient-notes" data-mr-notes-panel hidden>
+                                        <form action="patients_controller.php" method="post" class="mr-form">
+                                            <input type="hidden" name="action" value="save_note">
+                                            <input type="hidden" name="patient_id" value="<?= (int) $p['patient_id'] ?>">
+                                            <textarea class="mr-input mr-textarea" name="note" rows="3"
+                                                placeholder="Private notes only you can see — not shared with the patient."><?= htmlspecialchars($p['note']) ?></textarea>
+                                            <div class="mr-form-actions">
+                                                <button type="submit" class="mr-btn-secondary"><i class="ph ph-check"></i> Save note</button>
+                                                <?php if (!empty($p['note_updated_at'])): ?>
+                                                    <span class="mr-field-hint">Last updated <?= htmlspecialchars(date('d M Y, g:i A', strtotime($p['note_updated_at']))) ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </form>
                                     </div>
                                 </article>
                             <?php endforeach; ?>

@@ -115,3 +115,129 @@
   border-radius: var(--radius-pill);
   transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* =========================================================================
+   TABLE / CALENDAR VIEW TOGGLE
+   ========================================================================= */
+
+.mr-view-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-inset);
+  border-radius: var(--radius-pill);
+  padding: 4px;
+}
+
+.mr-view-toggle-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.mr-view-toggle-btn.is-active {
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+}
+
+/* =========================================================================
+   CALENDAR VIEW
+   ========================================================================= */
+
+.mr-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.mr-calendar-month-label {
+  font-weight: 600;
+  font-size: var(--text-base);
+  min-width: 140px;
+  text-align: center;
+}
+
+.mr-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.mr-calendar-weekday {
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: 600;
+  padding-bottom: 6px;
+}
+
+.mr-calendar-cell {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: var(--surface-inset);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 48px;
+}
+
+.mr-calendar-cell.is-empty {
+  background: transparent;
+}
+
+.mr-calendar-cell.is-today {
+  box-shadow: 0 0 0 2px var(--accent) inset;
+}
+
+.mr-calendar-daynum {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.mr-calendar-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.mr-calendar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.mr-calendar-dot.is-taken {
+  background: var(--status-taken-color, #1f9d55);
+}
+
+.mr-calendar-dot.is-missed {
+  background: var(--status-missed-color, #e0433f);
+}
+
+.mr-calendar-dot.is-upcoming {
+  background: var(--status-upcoming-color, #226699);
+}
+
+.mr-calendar-legend {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 16px;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.mr-calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

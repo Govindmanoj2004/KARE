@@ -62,7 +62,7 @@ if (!$selected && !empty($conversations)) {
 
 $messages = [];
 if ($selected) {
-    $msgStmt = mysqli_prepare($con, 'SELECT id, sender_id, body, created_at FROM messages WHERE connection_id = ? ORDER BY id ASC');
+    $msgStmt = mysqli_prepare($con, 'SELECT id, sender_id, body, created_at, read_at FROM messages WHERE connection_id = ? ORDER BY id ASC');
     mysqli_stmt_bind_param($msgStmt, 'i', $selectedId);
     mysqli_stmt_execute($msgStmt);
     $msgResult = mysqli_stmt_get_result($msgStmt);
@@ -179,10 +179,16 @@ if ($selected) {
                                         <?php if (empty($messages)): ?>
                                             <div class="mr-thread-empty">No messages yet — say hello!</div>
                                         <?php endif; ?>
-                                        <?php foreach ($messages as $m): ?>
+                                        <?php $lastMineIndex = null; foreach ($messages as $mi => $mm) { if ((int) $mm['sender_id'] === $userId) { $lastMineIndex = $mi; } } ?>
+                                        <?php foreach ($messages as $mi => $m): ?>
                                             <div class="mr-bubble <?= (int) $m['sender_id'] === $userId ? 'is-mine' : 'is-theirs' ?>">
                                                 <div class="mr-bubble-body"><?= nl2br(htmlspecialchars($m['body'])) ?></div>
-                                                <div class="mr-bubble-time"><?= htmlspecialchars(date('g:i A', strtotime($m['created_at']))) ?></div>
+                                                <div class="mr-bubble-time">
+                                                    <?= htmlspecialchars(date('g:i A', strtotime($m['created_at']))) ?>
+                                                    <?php if ($mi === $lastMineIndex && !empty($m['read_at'])): ?>
+                                                        <span class="mr-bubble-seen"><i class="ph ph-checks"></i> Seen</span>
+                                                    <?php endif; ?>
+                                                </div>
                                             </div>
                                         <?php endforeach; ?>
                                     </div>

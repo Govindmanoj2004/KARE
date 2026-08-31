@@ -344,26 +344,160 @@ admin portal (§ "what's next" below), and a doctor's view of a patient's
 schedule is intentionally read-only (no editing another user's medicines
 from here).
 
+## 20. Admin module (`pages/admin/`, `shared/admin/`)
+
+Closes the loop on the last major gap: the "Report an Issue" flow (§9)
+had a patient-side submission UI and `admin_reply`/`replied_at` columns
+sitting unused ever since, with no way for anyone to actually reply.
+`role='admin'` logins were also just signed out with an apology toast.
+Both are now real.
+
+- **No schema changes needed** beyond seeding the first admin account
+  (`db/06_admin_module.sql`) — `users.is_verified` (already existed,
+  previously unused) is reused for doctor verification, and
+  `reports.admin_reply`/`replied_at` (already existed since §9) are
+  finally written to.
+- **Login routing** (`auth/login/controller.php`) — `role='admin'` now
+  routes to `pages/admin/home.php` instead of being signed out.
+- **`assets/helpers/auth.php`** — `require_role()` extended with an
+  `'admin'` case in its wrong-role redirect map, so a patient or doctor
+  hitting an admin URL bounces to their own home, same as the existing
+  doctor/patient cases.
+- **`shared/admin/sidebar.php` + `navbar.php`** — same conventions as
+  the other two role shells. Sidebar badges: open-report count, and
+  unverified-doctor count.
+- **Dashboard** (`pages/admin/home.php`) — patient/doctor counts, open
+  reports, unverified doctors, an account-status breakdown
+  (active/suspended/deactivated), and a preview of recent open reports.
+- **Users** (`pages/admin/users/`) — every user, searchable (also fed by
+  the navbar search) and filterable by role/status. Per row: suspend/
+  reactivate (status-appropriate button, not a fixed pair), and a
+  verify/unverify toggle on doctor rows. An admin cannot change their
+  own status from this page (routed to Account instead) — verified this
+  rejection actually fires rather than just hiding the button. Verified
+  a suspended user is immediately blocked from logging back in.
+- **Reports** (`pages/admin/reports/`) — two-pane list/detail view
+  (same shape as the messaging pages), filterable by status, with a
+  reply form that writes `admin_reply`/`replied_at`/`status`. Verified
+  the **full loop**: patient submits → shows up in admin's Open filter →
+  admin replies + marks resolved → patient's own Report page (§ report/)
+  renders the reply and new status with zero changes needed there — it
+  was already built to display these columns, just never had anything
+  in them.
+- **Account** (`pages/admin/account/`) — same shape as the doctor's
+  Account page (details, password, notifications, deactivation), plus
+  one admin-specific safeguard: deactivation is blocked if it's the last
+  active admin account, since there'd be no way back into the portal
+  afterward. Verified both sides of this — blocked with one admin,
+  succeeds once a second active admin exists.
+
 ---
+
+## 21. Planned additions (README §12), all implemented and tested
+
+All five small features approved in README §12 are now built. One
+schema migration (`db/07_planned_additions.sql`): `dose_logs` gained
+`snooze_count`, and a new `doctor_patient_notes` table was added. The
+other three features needed no schema changes at all.
+
+- **Message "seen" indicator** — `messages.read_at` (already existed,
+  set since §16) is now selected and rendered: a "Seen" checkmark shows
+  under the sender's own last message once the recipient has opened the
+  thread. Verified no false-positive before viewing, correct appearance
+  after. Known simplification, documented in code: this is computed on
+  page load only — an already-open thread doesn't retroactively gain the
+  indicator via the 3s poll without a reload, since read-marking happens
+  on page load, not on poll.
+- **"Remember me" on login** — a checkbox on the login form; when
+  checked, `session_set_cookie_params(30 days)` is called *before*
+  `session_start()` in `auth/login/controller.php` (has to happen in
+  that order). Verified via raw `Set-Cookie` headers: unchecked gives an
+  ordinary session cookie, checked gives a 30-day `Max-Age`.
+- **Snooze a dose** — new `snooze_dose` action in
+  `pages/user/schedule/schedule_controller.php`, pushes
+  `scheduled_for` by 15/30/60 minutes, capped at 3 snoozes per dose
+  (`snooze_count`) so it can't be pushed forever, and only works on an
+  `upcoming` dose. Verified: time advances correctly across repeated
+  snoozes, the 4th attempt is rejected with a clear message, snoozing a
+  `taken` dose is rejected, and cross-user access is blocked the same
+  way `mark_dose` already was.
+- **Calendar view of dose history** — a Table/Calendar toggle on
+  `pages/user/reports.php`; the calendar is a month grid built from a
+  day-grouped version of the same `dose_logs` join already used for the
+  adherence stats, with prev/next month navigation via `?month=YYYY-MM`.
+  Verified: correct day count including leading empty cells, today's
+  cell highlighted, dots match actual seeded dose data, and an invalid
+  `?month=garbage` value falls back to the current month instead of
+  crashing.
+- **Private notes on a patient** — new `doctor_patient_notes` table
+  (one row per doctor-patient pair, upserted on save), a collapsible
+  note panel on each patient card in `pages/doctor/patients/`, `save_note`
+  in `patients_controller.php`. Verified: save, upsert-not-duplicate,
+  clearing via empty submit deletes the row, saving a note for a patient
+  the doctor isn't (accepted-)connected to is rejected, and — checked
+  explicitly — **nothing on the patient side reads this table at all**,
+  confirmed by grepping every patient-facing file and by loading every
+  patient page while a note existed and finding zero occurrences of its
+  content.
+
+## 22. Full regression + edge-case pass across all three portals
+
+Beyond the individual feature tests above, ran a dedicated pass looking
+for crashes and logic errors across the whole app:
+
+- Fresh `DROP DATABASE` + rebuild from all 7 migration files in order,
+  then exercised every page across all three roles (patient, doctor,
+  admin) — every page 200 when authenticated, every page 302 when not,
+  zero PHP warnings/errors/notices in the server log across the entire
+  run.
+- **Empty states**: verified a brand-new user sees the correct
+  empty-state message (not a blank page or error) on dashboard,
+  schedule, reports, prescriptions, and messages.
+- **Invalid/malformed input**: medicine with no reminder times, empty
+  medicine name, malformed time value (`99:99`), negative/non-numeric/
+  SQL-injection-shaped IDs passed to `mark_dose` — all rejected cleanly
+  with no server errors (prepared statements + `(int)` casts held).
+- **Auth edge cases**: duplicate-email signup, mismatched-password
+  signup, missing terms checkbox, wrong password, nonexistent email,
+  malformed email format — each produces its own correct, specific
+  error message.
+- **XSS resistance**: `<script>` and `<img onerror>` payloads in a
+  medicine name and a report subject both render as escaped text
+  (`&lt;script&gt;...`), never as executable markup, anywhere they're
+  displayed.
+- **File upload limits**: a 3MB file against the 2MB cap is rejected
+  (caught by PHP's own `upload_max_filesize` before the app's own
+  validation even runs).
+- **Admin/doctor boundary conditions**: an invalid status value passed
+  to `update_status`, verifying a non-doctor user as if they were a
+  doctor, an empty-body report reply, a reply to a nonexistent report
+  id, a doctor saving a note against `patient_id=0` — all rejected with
+  clear messages, no crashes.
+- **Cross-feature integration**: confirmed the calendar view's dots
+  reflect the same underlying data as the dashboard/schedule after a
+  snooze/mark action, and confirmed search results are correctly scoped
+  to the logged-in user's own data (a search term matching another
+  user's medicine correctly returns "no matches," not their medicine).
+
+---
+
 
 ## What's next (not yet built)
 
-The user (patient) side (§10–§18) and the doctor side (§19) are both
-functionally complete — every sidebar link on both sides resolves to a
-real, tested page. What's left:
+All three sides — patient (§10–§18), doctor (§19), and admin (§20) —
+are now functionally complete. Every sidebar link across all three
+resolves to a real, tested page, and every `role` value in the `users`
+enum has somewhere to log in to. The five small approved additions
+(§21) are also done. What's left:
 
-- Email/SMS notifications — preferences are collected on both sides
-  (§12, §19) but nothing actually sends anything yet (PHPMailer,
-  Fast2SMS/Twilio)
+- Email/SMS notifications — preferences are collected on all three
+  sides (§12, §19, §20) but nothing actually sends anything yet
+  (PHPMailer, Fast2SMS/Twilio)
 - Missed-dose detection via cron job (today's dose rows are created
   automatically — see §10 — but nothing yet auto-flips an overdue
-  'upcoming' row to 'missed')
+  'upcoming' row to 'missed'; note this is distinct from §21's snooze
+  feature, which only pushes a dose's time back on explicit user action)
 - Prescription text extraction / OCR (upload + storage is done, §14)
-- **Admin module** — user management, doctor verification, system
-  health, and a reply/management view for the `reports` table from §9
-  (user-side submission is done, admin-side reply is not). `auth/login/
-  controller.php` already signs an admin login out with an explanatory
-  toast rather than dropping them into either existing dashboard.
 - If a caretaker-manages-multiple-patients relationship is ever wanted
   (see §18), it needs a real relationship table before any UI for it —
   the current `users.role` enum has no caretaker role

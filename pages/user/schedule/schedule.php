@@ -63,7 +63,7 @@ if (!empty($medicines)) {
 // --- Today's doses, earliest first ------------------------------------------
 $todaysDoses = [];
 $doseStmt = mysqli_prepare($con, "
-    SELECT dl.id AS dose_log_id, m.name, m.dosage, dl.scheduled_for, dl.status
+    SELECT dl.id AS dose_log_id, m.name, m.dosage, dl.scheduled_for, dl.status, dl.snooze_count
     FROM dose_logs dl
     JOIN medicine_schedules ms ON ms.id = dl.schedule_id
     JOIN medicines m ON m.id = ms.medicine_id
@@ -186,6 +186,20 @@ unset($_SESSION['schedule_old']);
                                                                 <i class="ph ph-x"></i>
                                                             </button>
                                                         </form>
+                                                        <?php if ((int) $dose['snooze_count'] < 3): ?>
+                                                            <form action="schedule_controller.php" method="post" class="mr-snooze-form">
+                                                                <input type="hidden" name="action" value="snooze_dose">
+                                                                <input type="hidden" name="dose_log_id" value="<?= (int) $dose['dose_log_id'] ?>">
+                                                                <select name="minutes" class="mr-snooze-select" title="Snooze">
+                                                                    <option value="15">Snooze 15m</option>
+                                                                    <option value="30">Snooze 30m</option>
+                                                                    <option value="60">Snooze 1h</option>
+                                                                </select>
+                                                                <button type="submit" class="mr-dose-btn is-snooze-btn" title="Snooze this dose">
+                                                                    <i class="ph ph-alarm"></i>
+                                                                </button>
+                                                            </form>
+                                                        <?php endif; ?>
                                                     </div>
                                                 <?php else: ?>
                                                     <span class="mr-field-hint">&mdash;</span>

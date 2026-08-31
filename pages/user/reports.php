@@ -96,6 +96,39 @@ $statusLabels = [
     'taken'  => ['class' => 'is-taken',  'text' => 'Taken'],
     'missed' => ['class' => 'is-missed', 'text' => 'Missed'],
 ];
+
+// --- Calendar data: dose status per day for the selected month ---------------
+// Reuses the same dose_logs join used everywhere else, just grouped by day
+// instead of listed flat. Supports navigating months via ?month=YYYY-MM.
+$monthParam = $_GET['month'] ?? date('Y-m');
+if (!preg_match('/^\d{4}-\d{2}$/', $monthParam)) {
+    $monthParam = date('Y-m');
+}
+$monthStart = $monthParam . '-01';
+$monthLabel = date('F Y', strtotime($monthStart));
+$prevMonth = date('Y-m', strtotime($monthStart . ' -1 month'));
+$nextMonth = date('Y-m', strtotime($monthStart . ' +1 month'));
+
+$calendarDays = []; // 'YYYY-MM-DD' => ['taken' => n, 'missed' => n, 'upcoming' => n]
+$calStmt = mysqli_prepare($con, "
+    SELECT DATE(dl.scheduled_for) AS day, dl.status, COUNT(*) AS c
+    FROM dose_logs dl
+    JOIN medicine_schedules ms ON ms.id = dl.schedule_id
+    JOIN medicines m ON m.id = ms.medicine_id
+    WHERE m.user_id = ? AND DATE(dl.scheduled_for) BETWEEN ? AND LAST_DAY(?)
+    GROUP BY DATE(dl.scheduled_for), dl.status
+");
+mysqli_stmt_bind_param($calStmt, 'iss', $userId, $monthStart, $monthStart);
+mysqli_stmt_execute($calStmt);
+$calResult = mysqli_stmt_get_result($calStmt);
+while ($row = mysqli_fetch_assoc($calResult)) {
+    $calendarDays[$row['day']][$row['status']] = (int) $row['c'];
+}
+mysqli_stmt_close($calStmt);
+
+$daysInMonth = (int) date('t', strtotime($monthStart));
+$firstWeekday = (int) date('w', strtotime($monthStart)); // 0 (Sun) - 6 (Sat)
+$todayStr = date('Y-m-d');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -208,8 +241,13 @@ $statusLabels = [
                     <!-- Recent history -->
                     <div class="mr-card-heading-row" data-mr-scroll-entry style="--index: 6">
                         <div class="mr-card-heading">Recent history</div>
+                        <div class="mr-view-toggle">
+                            <button type="button" class="mr-view-toggle-btn is-active" data-mr-view-btn="table">Table</button>
+                            <button type="button" class="mr-view-toggle-btn" data-mr-view-btn="calendar">Calendar</button>
+                        </div>
                     </div>
 
+                    <div data-mr-view-panel="table">
                     <?php if (empty($history)): ?>
                         <div class="mr-schedule-empty" data-mr-scroll-entry style="--index: 7">
                             <i class="ph ph-clock-counter-clockwise"></i>
@@ -237,6 +275,50 @@ $statusLabels = [
                             </table>
                         </div>
                     <?php endif; ?>
+                    </div>
+
+                    <div data-mr-view-panel="calendar" hidden>
+                        <div class="mr-calendar-nav">
+                            <a href="reports.php?month=<?= $prevMonth ?>" class="mr-icon-btn" title="Previous month"><i class="ph ph-caret-left"></i></a>
+                            <span class="mr-calendar-month-label"><?= htmlspecialchars($monthLabel) ?></span>
+                            <a href="reports.php?month=<?= $nextMonth ?>" class="mr-icon-btn" title="Next month"><i class="ph ph-caret-right"></i></a>
+                        </div>
+
+                        <div class="mr-calendar-grid">
+                            <?php foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $wd): ?>
+                                <div class="mr-calendar-weekday"><?= $wd ?></div>
+                            <?php endforeach; ?>
+
+                            <?php for ($i = 0; $i < $firstWeekday; $i++): ?>
+                                <div class="mr-calendar-cell is-empty"></div>
+                            <?php endfor; ?>
+
+                            <?php for ($day = 1; $day <= $daysInMonth; $day++):
+                                $dateStr = sprintf('%s-%02d', $monthParam, $day);
+                                $dayData = $calendarDays[$dateStr] ?? [];
+                                $taken = $dayData['taken'] ?? 0;
+                                $missed = $dayData['missed'] ?? 0;
+                                $upcoming = $dayData['upcoming'] ?? 0;
+                            ?>
+                                <div class="mr-calendar-cell<?= $dateStr === $todayStr ? ' is-today' : '' ?>">
+                                    <span class="mr-calendar-daynum"><?= $day ?></span>
+                                    <?php if ($taken || $missed || $upcoming): ?>
+                                        <span class="mr-calendar-dots">
+                                            <?php if ($taken): ?><span class="mr-calendar-dot is-taken" title="<?= $taken ?> taken"></span><?php endif; ?>
+                                            <?php if ($missed): ?><span class="mr-calendar-dot is-missed" title="<?= $missed ?> missed"></span><?php endif; ?>
+                                            <?php if ($upcoming): ?><span class="mr-calendar-dot is-upcoming" title="<?= $upcoming ?> upcoming"></span><?php endif; ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endfor; ?>
+                        </div>
+
+                        <div class="mr-calendar-legend">
+                            <span><span class="mr-calendar-dot is-taken"></span> Taken</span>
+                            <span><span class="mr-calendar-dot is-missed"></span> Missed</span>
+                            <span><span class="mr-calendar-dot is-upcoming"></span> Upcoming</span>
+                        </div>
+                    </div>
 
                 </section>
 

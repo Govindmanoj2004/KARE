@@ -164,6 +164,24 @@ body {
   color: #5c5c5c;
 }
 
+.login-9-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #5c5c5c;
+  cursor: pointer;
+  margin: -8px 0 4px;
+}
+
+.login-9-remember input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #55ACEE;
+  cursor: pointer;
+  margin: 0;
+}
+
 .login-9-form > button[type="submit"] {
   color: #f9f9f9;
   font-weight: 500;

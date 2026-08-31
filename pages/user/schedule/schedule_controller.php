@@ -8,6 +8,7 @@
  *   - update_medicine   : edit a medicine's name/dosage/notes/times
  *   - delete_medicine   : remove a medicine (cascades schedules + dose_logs)
  *   - mark_dose         : mark a today's-schedule dose as taken / missed
+ *   - snooze_dose        : push an upcoming dose back 15/30/60 min (max 3x)
  *
  * Same PRG + toast pattern as profile_controller.php / report_controller.php.
  * The delete action is triggered via the shared confirm modal, whose hidden
@@ -259,6 +260,60 @@ if ($action === 'mark_dose') {
         mysqli_stmt_close($updateStmt);
         $label = $newStatus === 'taken' ? 'Marked as taken.' : 'Marked as missed.';
         back_with_toast('success', [$label]);
+    } else {
+        mysqli_stmt_close($updateStmt);
+        back_with_toast('error', ['Something went wrong. Please try again.']);
+    }
+}
+
+// =============================================================================
+// ACTION: snooze_dose — push an upcoming dose back by 15/30/60 minutes
+// =============================================================================
+if ($action === 'snooze_dose') {
+
+    $doseLogId = (int) ($_POST['dose_log_id'] ?? 0);
+    $minutes = (int) ($_POST['minutes'] ?? 0);
+
+    if ($doseLogId <= 0 || !in_array($minutes, [15, 30, 60], true)) {
+        back_with_toast('error', ['Invalid request.']);
+    }
+
+    // Ownership check + fetch current status/snooze_count in one go —
+    // only an 'upcoming' dose can be snoozed, and only up to 3 times so
+    // it can't be pushed forever.
+    $ownStmt = mysqli_prepare($con, "
+        SELECT dl.id, dl.status, dl.snooze_count
+        FROM dose_logs dl
+        JOIN medicine_schedules ms ON ms.id = dl.schedule_id
+        JOIN medicines m ON m.id = ms.medicine_id
+        WHERE dl.id = ? AND m.user_id = ?
+        LIMIT 1
+    ");
+    mysqli_stmt_bind_param($ownStmt, 'ii', $doseLogId, $userId);
+    mysqli_stmt_execute($ownStmt);
+    $doseRow = mysqli_fetch_assoc(mysqli_stmt_get_result($ownStmt));
+    mysqli_stmt_close($ownStmt);
+
+    if (!$doseRow) {
+        back_with_toast('error', ['That dose could not be found.']);
+    }
+    if ($doseRow['status'] !== 'upcoming') {
+        back_with_toast('error', ['Only an upcoming dose can be snoozed.']);
+    }
+    if ((int) $doseRow['snooze_count'] >= 3) {
+        back_with_toast('error', ["This dose has already been snoozed 3 times — mark it taken or missed instead."]);
+    }
+
+    $updateStmt = mysqli_prepare($con, '
+        UPDATE dose_logs
+        SET scheduled_for = scheduled_for + INTERVAL ? MINUTE, snooze_count = snooze_count + 1
+        WHERE id = ?
+    ');
+    mysqli_stmt_bind_param($updateStmt, 'ii', $minutes, $doseLogId);
+
+    if (mysqli_stmt_execute($updateStmt)) {
+        mysqli_stmt_close($updateStmt);
+        back_with_toast('success', ["Snoozed for $minutes minutes."]);
     } else {
         mysqli_stmt_close($updateStmt);
         back_with_toast('error', ['Something went wrong. Please try again.']);
