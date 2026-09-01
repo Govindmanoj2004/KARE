@@ -512,3 +512,12 @@ New `doctor_patient_notes` table (`07_planned_additions.sql`), `UNIQUE(doctor_id
 ### 12.5 Message "seen" indicator — as built
 `read_at` added to the message `SELECT`s in both `pages/user/messages/messages.php` and `pages/doctor/messages/messages.php` (previously fetched but not selected). A "Seen" checkmark renders under the sender's own **last** message in the thread only, when `read_at IS NOT NULL`. **Known simplification:** this is computed server-side on page load only — `messages_poll.php`'s live-append via `fetch` does not retroactively add the indicator to an already-rendered bubble when the other party reads it without the page reloading, since read-marking itself happens on page load, not via polling. Acceptable for this project's scope; flagged here for whoever extends the polling logic next.
 
+
+
+
+To do:
+1.Seed demo data.
+2.some elemets doesnt have design. Check all the ui elements and add style.
+  User module: shedule, Chat with doctor send button icon not centered, reports no style.
+  Doctor module: Dashboard, my patients(todays dose), messages sent icon not aligned,
+3.Admin: dashboard , users 
