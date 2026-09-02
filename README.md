@@ -516,8 +516,21 @@ New `doctor_patient_notes` table (`07_planned_additions.sql`), `UNIQUE(doctor_id
 
 
 To do:
-1.Seed demo data.
-2.some elemets doesnt have design. Check all the ui elements and add style.
+1. Seed demo data.
+2. Some elemets doesnt have design. Check all the ui elements and add style.
   User module: shedule, Chat with doctor send button icon not centered, reports no style.
   Doctor module: Dashboard, my patients(todays dose), messages sent icon not aligned,
-3.Admin: dashboard , users 
+3. Admin: dashboard , users 
+4. Doctor signup
+5. Seperate users and doctors in admin view.
+6. If sheduled medicine time is missed show missed.
+7. History of daily shedule, show a the progress in a graphicaly way(in reports, use barchart, linechart etc).
+8. Option to download precription format.
+9. Doctors should update prescription of patients if they ask it through chat like a request. they may need payment for it, nothing is free so.
+10. bug: when i change month in reports calendar the page resets to table.
+11. Update the design of timepicker in schedule.Too confusing.
+12. Wire up the working on notifications.For doctor and user(patient).
+13. Option to view active or current prescription given by the doctor to patient and update.
+14. Both patient and user can request for prescription update.Based on scenrios.
+15. Generate and design a guest page. where login and signup(both patient and doctor) is connected.
+16. 
