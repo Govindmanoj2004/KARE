@@ -126,27 +126,29 @@ $topDoctorTotal = !empty($revenueByDoctor) ? (float) $revenueByDoctor[0]['total'
                     </div>
                 </section>
 
-                <section class="mr-stat-grid" data-mr-scroll-entry style="--index: 0">
-                    <div class="mr-stat-card">
-                        <div class="mr-field-hint">Total platform revenue</div>
-                        <div class="mr-medicine-card-name" style="font-size: 22px;">$<?= number_format($totalVolume, 2) ?></div>
-                    </div>
-                    <div class="mr-stat-card">
-                        <div class="mr-field-hint">This month</div>
-                        <div class="mr-medicine-card-name" style="font-size: 22px;">$<?= number_format($monthRevenue, 2) ?></div>
-                        <div class="mr-field-hint"><?= $monthCount ?> payment<?= $monthCount === 1 ? '' : 's' ?></div>
-                    </div>
-                    <div class="mr-stat-card">
-                        <div class="mr-field-hint">Transactions</div>
-                        <div class="mr-medicine-card-name" style="font-size: 22px;"><?= $transactionCount ?></div>
-                    </div>
-                    <div class="mr-stat-card">
-                        <div class="mr-field-hint">Average payment</div>
-                        <div class="mr-medicine-card-name" style="font-size: 22px;">$<?= number_format($averageTransaction, 2) ?></div>
-                    </div>
-                </section>
-
                 <section class="mr-layout-card">
+
+                    <div class="mr-stat-grid" data-mr-scroll-entry style="--index: 0">
+                        <div class="mr-stat-card">
+                            <div class="mr-field-hint">Total platform revenue</div>
+                            <div class="mr-medicine-card-name" style="font-size: 22px;">$<?= number_format($totalVolume, 2) ?></div>
+                        </div>
+                        <div class="mr-stat-card">
+                            <div class="mr-field-hint">This month</div>
+                            <div class="mr-medicine-card-name" style="font-size: 22px;">$<?= number_format($monthRevenue, 2) ?></div>
+                            <div class="mr-field-hint"><?= $monthCount ?> payment<?= $monthCount === 1 ? '' : 's' ?></div>
+                        </div>
+                        <div class="mr-stat-card">
+                            <div class="mr-field-hint">Transactions</div>
+                            <div class="mr-medicine-card-name" style="font-size: 22px;"><?= $transactionCount ?></div>
+                        </div>
+                        <div class="mr-stat-card">
+                            <div class="mr-field-hint">Average payment</div>
+                            <div class="mr-medicine-card-name" style="font-size: 22px;">$<?= number_format($averageTransaction, 2) ?></div>
+                        </div>
+                    </div>
+
+                    <div class="mr-divider"></div>
 
                     <div class="mr-card-heading-row" data-mr-scroll-entry style="--index: 1">
                         <div class="mr-card-heading">Revenue by doctor</div>

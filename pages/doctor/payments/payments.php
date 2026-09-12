@@ -97,18 +97,20 @@ foreach ($payments as $p) {
                     </div>
                 </section>
 
-                <section class="mr-stat-grid" data-mr-scroll-entry style="--index: 0">
-                    <div class="mr-stat-card">
-                        <div class="mr-field-hint">Total earned</div>
-                        <div class="mr-medicine-card-name" style="font-size: 22px;">$<?= number_format($totalEarned, 2) ?></div>
-                    </div>
-                    <div class="mr-stat-card">
-                        <div class="mr-field-hint">Payments received</div>
-                        <div class="mr-medicine-card-name" style="font-size: 22px;"><?= count($payments) ?></div>
-                    </div>
-                </section>
-
                 <section class="mr-layout-card">
+
+                    <div class="mr-stat-grid" data-mr-scroll-entry style="--index: 0">
+                        <div class="mr-stat-card">
+                            <div class="mr-field-hint">Total earned</div>
+                            <div class="mr-medicine-card-name" style="font-size: 22px;">$<?= number_format($totalEarned, 2) ?></div>
+                        </div>
+                        <div class="mr-stat-card">
+                            <div class="mr-field-hint">Payments received</div>
+                            <div class="mr-medicine-card-name" style="font-size: 22px;"><?= count($payments) ?></div>
+                        </div>
+                    </div>
+
+                    <div class="mr-divider"></div>
 
                     <?php if (empty($payments)): ?>
                         <div class="mr-schedule-empty" data-mr-scroll-entry style="--index: 1">

@@ -963,8 +963,6 @@ a.mr-stat-card:hover {
 }
 
 .mr-table thead th {
-  position: sticky;
-  top: 0;
   background: var(--layout-bg);
   text-align: left;
   font-size: var(--text-xs);
