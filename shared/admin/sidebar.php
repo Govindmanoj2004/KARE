@@ -50,6 +50,7 @@ $mrNavGroups = [
         'items' => [
             ['key' => 'users',   'label' => 'Users',   'icon' => 'ph-users-three', 'href' => 'users/users.php', 'badge' => $mrUnverifiedDoctors > 0 ? $mrUnverifiedDoctors : null],
             ['key' => 'reports', 'label' => 'Reports',  'icon' => 'ph-flag',        'href' => 'reports/reports.php', 'badge' => $mrOpenReports > 0 ? $mrOpenReports : null],
+            ['key' => 'payments', 'label' => 'Financial Stats', 'icon' => 'ph-chart-line',    'href' => 'payments/payments.php'],
         ],
     ],
     [

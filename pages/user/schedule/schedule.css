@@ -73,18 +73,6 @@
   box-shadow: var(--shadow-card);
 }
 
-.mr-card-heading-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.mr-card-heading {
-  font-size: var(--text-md);
-  font-weight: 600;
-}
-
 .mr-form {
   display: flex;
   flex-direction: column;
@@ -276,9 +264,13 @@
   flex-wrap: wrap;
 }
 
-.mr-medicine-card-name {
-  font-weight: 600;
-  font-size: var(--text-base);
+/* .mr-medicine-card-main: was never actually defined -- without it the
+   name/dosage block doesn't grow to fill the card, so the edit/delete
+   actions sit close to the text instead of being pushed to the card's
+   right edge (visible with a short medicine name on a wide screen). */
+.mr-medicine-card-main {
+  flex: 1;
+  min-width: 200px;
 }
 
 .mr-medicine-card-dosage {

@@ -48,10 +48,17 @@ mysqli_stmt_execute($unreadStmt);
 $unreadCount = (int) (mysqli_fetch_assoc(mysqli_stmt_get_result($unreadStmt))['c'] ?? 0);
 mysqli_stmt_close($unreadStmt);
 
+$earningsStmt = mysqli_prepare($con, "SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE payee_id = ? AND status = 'paid'");
+mysqli_stmt_bind_param($earningsStmt, 'i', $doctorId);
+mysqli_stmt_execute($earningsStmt);
+$totalEarnings = (float) (mysqli_fetch_assoc(mysqli_stmt_get_result($earningsStmt))['total'] ?? 0);
+mysqli_stmt_close($earningsStmt);
+
 $stats = [
     ['icon' => 'ph-user-plus',       'value' => (string) $pendingCount, 'label' => 'Pending requests'],
     ['icon' => 'ph-users-three',     'value' => (string) $activeCount,  'label' => 'Active patients'],
     ['icon' => 'ph-chat-circle-dots', 'value' => (string) $unreadCount, 'label' => 'Unread messages'],
+    ['icon' => 'ph-currency-circle-dollar', 'value' => '$' . number_format($totalEarnings, 2), 'label' => 'Total earnings', 'href' => 'payments/payments.php'],
 ];
 
 // --- Recent pending requests preview (up to 5) --------------------------------
@@ -71,6 +78,24 @@ while ($row = mysqli_fetch_assoc($reqResult)) {
     $recentRequests[] = $row;
 }
 mysqli_stmt_close($reqStmt);
+
+// --- Recent payments received preview (up to 5) -------------------------------
+$recentPayments = [];
+$payStmt = mysqli_prepare($con, "
+    SELECT p.id, p.amount, p.paid_at, p.created_at, pat.name AS patient_name
+    FROM payments p
+    JOIN users pat ON pat.id = p.payer_id
+    WHERE p.payee_id = ? AND p.status = 'paid'
+    ORDER BY p.created_at DESC
+    LIMIT 5
+");
+mysqli_stmt_bind_param($payStmt, 'i', $doctorId);
+mysqli_stmt_execute($payStmt);
+$payResult = mysqli_stmt_get_result($payStmt);
+while ($row = mysqli_fetch_assoc($payResult)) {
+    $recentPayments[] = $row;
+}
+mysqli_stmt_close($payStmt);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -124,13 +149,14 @@ mysqli_stmt_close($reqStmt);
 
                     <div class="mr-stat-grid">
                         <?php foreach ($stats as $i => $stat): ?>
-                            <div class="mr-stat-card" data-mr-scroll-entry style="--index: <?= $i ?>">
+                            <?php $statTag = !empty($stat['href']) ? 'a' : 'div'; ?>
+                            <<?= $statTag ?> class="mr-stat-card" <?= !empty($stat['href']) ? 'href="' . htmlspecialchars($stat['href']) . '"' : '' ?> data-mr-scroll-entry style="--index: <?= $i ?>">
                                 <div class="mr-stat-card-top">
                                     <span class="mr-stat-icon"><i class="ph <?= htmlspecialchars($stat['icon']) ?>"></i></span>
                                 </div>
                                 <div class="mr-stat-value"><?= htmlspecialchars($stat['value']) ?></div>
                                 <div class="mr-stat-label"><?= htmlspecialchars($stat['label']) ?></div>
-                            </div>
+                            </<?= $statTag ?>>
                         <?php endforeach; ?>
                     </div>
 
@@ -156,6 +182,33 @@ mysqli_stmt_close($reqStmt);
                                         <div class="mr-field-hint"><?= htmlspecialchars($r['email']) ?></div>
                                     </div>
                                     <a href="requests/requests.php" class="mr-btn-secondary">Review</a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="mr-divider"></div>
+
+                    <div class="mr-card-heading-row" data-mr-scroll-entry style="--index: 5">
+                        <div class="mr-card-heading">Recent payments received</div>
+                        <a href="payments/payments.php" class="mr-card-link">View all &rarr;</a>
+                    </div>
+
+                    <?php if (empty($recentPayments)): ?>
+                        <div class="mr-schedule-empty" data-mr-scroll-entry style="--index: 6">
+                            <i class="ph ph-receipt"></i>
+                            <p>No payments yet. Set a consultation fee on your Account page to start earning from new connections.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="mr-request-list" data-mr-scroll-entry style="--index: 6">
+                            <?php foreach ($recentPayments as $p): ?>
+                                <div class="mr-request-item">
+                                    <span class="mr-profile-avatar mr-request-avatar"><?= htmlspecialchars(strtoupper(substr($p['patient_name'], 0, 1))) ?></span>
+                                    <div class="mr-request-main">
+                                        <div class="mr-medicine-card-name"><?= htmlspecialchars($p['patient_name']) ?></div>
+                                        <div class="mr-field-hint"><?= htmlspecialchars(date('d M Y', strtotime($p['paid_at'] ?? $p['created_at']))) ?></div>
+                                    </div>
+                                    <span class="mr-badge is-success">$<?= number_format((float) $p['amount'], 2) ?></span>
                                 </div>
                             <?php endforeach; ?>
                         </div>

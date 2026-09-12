@@ -68,6 +68,7 @@ $mrNavGroups = [
             ['key' => 'prescriptions', 'label' => 'Prescriptions', 'icon' => 'ph-file-text',    'href' => 'prescriptions/prescriptions.php'],
             ['key' => 'doctors',       'label' => 'Doctors',       'icon' => 'ph-stethoscope',  'href' => 'doctors/doctors.php'],
             ['key' => 'messages',      'label' => 'Messages',      'icon' => 'ph-chat-circle-dots', 'href' => 'messages/messages.php', 'badge' => $mrUnreadMessages > 0 ? $mrUnreadMessages : null],
+            ['key' => 'payments',      'label' => 'Payments',      'icon' => 'ph-receipt',      'href' => 'payments/payments.php'],
         ],
     ],
     [

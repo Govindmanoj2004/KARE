@@ -481,6 +481,189 @@ for crashes and logic errors across the whole app:
 
 ---
 
+## 23. Payments — consultation fees & pay-to-connect (`pages/user/payments/`, `pages/doctor/payments/`, `pages/admin/payments/`)
+
+Doctors previously had no way to charge for their time at all — the only
+existing money concept was `prescription_requests.fee_amount`/`fee_paid`
+(§ README 3.10), a pair of columns bolted onto one narrow workflow. This
+adds a general, doctor-settable **consultation fee**, charged up front
+before a patient can even send a connection request ("pay-to-connect"),
+plus a proper payments ledger, checkout, receipt, and history views on
+all three portals.
+
+**Schema** (`db/12_consultation_payments.sql`):
+- `users.consultation_fee` — nullable `decimal(8,2)`, doctor-only field
+  (same shape as `specialty`). `NULL`/`0` means free — connecting stays
+  exactly as it worked before this change, so every existing doctor and
+  every existing connection is unaffected until a doctor opts in by
+  setting a fee.
+- `payments` — one row per simulated payment: `payer_id`/`payee_id` (both
+  FK → `users.id`), `type` (`'consultation'` today, `'prescription_request'`
+  reserved for later folding the existing fee-per-request flow into the
+  same ledger — not done in this pass, to avoid touching a working
+  feature), `reference_id` (the `doctor_connections.id` it paid for),
+  `amount`, `status` (`pending`/`paid`/`failed`), `method` (always
+  `'simulated'` today), `paid_at`, `created_at`.
+
+**Still simulated, per README §7/§8** — no real payment gateway, no card
+network contacted, no money actually moves. The checkout page collects
+card-shaped fields (name, number, expiry, CVC) and validates their
+*shape* server-side (regex — 13–19 digit number, `MM/YY` expiry, 3–4
+digit CVC) purely so the flow feels real; the moment those pass, a
+`payments` row is written straight to `status = 'paid'`. Same spirit as
+the pre-existing `pay_fee` action on prescription requests.
+
+**Doctor side — setting a fee:** `pages/doctor/account/account_controller.php`'s
+existing `update_profile` action gained a `consultation_fee` field
+alongside `specialty` — optional, validated as a non-negative number or
+blank. The Account page shows a "Free consultation" or "$X consultation"
+badge next to the doctor's specialty badge depending on whether it's set.
+
+**Patient side — pay-to-connect:** `pages/user/doctors/doctors.php`'s
+directory query now also selects `consultation_fee`. Each doctor card
+shows "Free consultation" or "$X consultation fee" under the specialty
+line. For an unconnected doctor with a fee set, the existing free
+"Connect" button (which opens the note-only dialog) is replaced with a
+"Pay & Connect" link to the new `pages/user/payments/checkout.php` —
+doctors with no fee keep the exact original free-connect dialog
+unchanged.
+
+`checkout.php` shows an order summary (doctor, fee, total) and a card
+form (name/number/expiry/CVC + the same optional note field the free
+dialog has), posting to the new `pages/user/payments/payments_controller.php`'s
+`pay_and_connect` action. That action, in one transaction:
+1. Re-validates the doctor server-side (active, verified, has a fee) —
+   never trusts the amount the checkout page rendered from.
+2. Re-checks the `(patient_id, doctor_id)` uniqueness constraint so a
+   double-submit can't charge twice or create two connections.
+3. Inserts the `payments` row as `paid`.
+4. Inserts the `doctor_connections` row (same effect as the free
+   `request_connection` action).
+5. Links `payments.reference_id` to the new connection id.
+6. Notifies the doctor: *"\[Patient\] paid $X and sent you a connection
+   request."* — one notification covering both events, reusing the
+   existing `connection_request` type/link so it lands in the same place
+   a free request would.
+
+On success, redirects to `receipt.php?payment_id=…` rather than back to
+the doctors list, so the patient sees confirmation immediately.
+
+**Receipt & history:**
+- `pages/user/payments/receipt.php` — a printable receipt
+  (doctor/patient/amount/date/status), ownership-checked to the paying
+  patient. "Download" is the browser's own print-to-PDF (a `@media
+  print` block hides the sidebar/navbar/toast) rather than a new
+  server-side PDF library, consistent with this project's no-build-step
+  approach.
+- `pages/user/payments/payments.php` — the patient's own payment
+  history (new "Payments" sidebar item, `Care` group), total paid +
+  count stat cards, a table of every payment with a link to its receipt.
+- `pages/doctor/payments/payments.php` — the doctor's earnings view
+  (new "Payments" sidebar item), same shape, scoped to `payee_id`,
+  read-only (a doctor doesn't act on a payment — the patient pays once,
+  up front).
+- `pages/admin/payments/payments.php` — read-only, all-platform
+  transaction list (new "Payments" sidebar item under Management),
+  total volume + transaction-count stat cards. No admin action on a
+  payment (no refund/void) is built — visibility only, matching how
+  the admin Reports page is currently the only admin write surface.
+
+**A pre-existing styling gap, not repeated here:** discovered while
+building this that `.mr-table`/`.mr-table-wrap` (the sortable-looking
+list styling used by the dashboard's and Reports' history tables) is
+only actually defined in `pages/user/home.css` — `pages/user/reports.css`
+uses the same classes but never defines them, so `reports.php`'s dose
+history table has likely been running unstyled-by-default this whole
+time (a narrower case of the same "moved to shared/components.css" bug
+documented in the September 2026 batch for stat-cards). Not fixed here
+(out of scope for this pass — flagged for whoever touches `reports.css`
+next); this feature's own `pages/*/payments/payments.css` defines its
+own copy of `.mr-table` rather than depending on `home.css` happening to
+already be loaded, so the new Payments tables render correctly
+regardless.
+
+**Demo data** (`db/13_seed_demo_payments.sql`): two of the three seeded
+demo doctors were given a fee (`rahul.nair@kare-demo.test` → $25,
+`sara.thomas@kare-demo.test` → $40; `anjali.menon@kare-demo.test` stays
+free, exercising the "no fee" path). Seeded three `payments` rows
+reusing `testpatient`'s existing connections to the two paid doctors,
+plus one new connection + payment for `kohai` → Dr. Sara Thomas, so all
+three Payments views (patient/doctor/admin) show real, non-empty,
+multi-patient/multi-doctor data on a fresh install.
+
+**Tested live** against the sandbox (curl, exact request shapes, not
+just reading the code):
+- Fee editing on the doctor Account page — set, updated, and cleared
+  back to free; badge updates correctly each time.
+- Doctors directory — confirmed per-doctor branching (free badge + free
+  Connect dialog vs. fee badge + Pay & Connect link) renders correctly,
+  and that a doctor a patient is *already* connected/pending to shows
+  the existing status badge regardless of fee (checkout is only offered
+  for a genuinely new connection).
+- Full checkout → payment → connection → notification → receipt chain,
+  end to end, as a patient (`govindmanoj333@gmail.com`) connecting to a
+  paid doctor for the first time: confirmed the `payments` row, the
+  `doctor_connections` row, and the notification row all landed with
+  the correct linked ids and amounts, and that the doctor's
+  notification bell (`notifications_fetch.php`) showed the expected
+  unread notification.
+- **Double-submit / duplicate-connection guard**: attempted
+  `pay_and_connect` a second time against a doctor the patient had
+  already just paid and requested — correctly rejected before writing
+  anything, verified no second `payments` row was created.
+- **Card validation**: malformed card number/expiry/CVC rejected with a
+  clear error, back on the checkout page, confirmed no `payments` row
+  was written for the rejected attempt.
+- Doctor earnings page and admin all-payments page both verified to
+  show the correct aggregated totals and per-row data across multiple
+  patients and doctors.
+- All test data created during this pass (a throwaway connection,
+  payment, and notification for `govindmanoj333@gmail.com` paying Dr.
+  Sara Thomas) was deleted afterward — the sandbox DB was confirmed back
+  at the seeded row counts from `13_seed_demo_payments.sql`.
+
+**Deliberately not done:** folding the existing prescription-request fee
+(§ README 3.10) into the new `payments` table — the `type` enum reserves
+space for it (`'prescription_request'`), but the existing
+`prescriptions`/`prescription_requests` fee flow is left untouched to
+avoid risking a working feature; a future pass could migrate it once
+there's a concrete reason to. No refunds, no partial payments, no
+real gateway (Stripe/Razorpay or otherwise) — all explicitly out of
+scope per README §7/§8 unless asked for.
+
+---
+
+## 24. Styling audit + doctor/admin financial visibility
+
+A follow-up pass triggered by user-reported "some elements are shown without style," plus two feature requests: doctor-facing earnings visibility, and an admin-facing financial statistics page.
+
+**Styling audit — real, widespread bugs found and fixed.** Ran a systematic check (every page's HTML classes vs. what's actually defined in its included stylesheets) rather than relying on the one gap already flagged in §23. Found this was far bigger than expected — the exact same "moved to shared" bug class documented for `.mr-stat-grid`/`.mr-stat-card` in the September 2026 batch (§6) had recurred repeatedly:
+
+- **`.mr-medicine-card-name`** (the bold name/heading text) was only actually defined in 2 of 17 pages using it — doctor dashboard, doctor patients/prescriptions/account/requests/payments, admin dashboard/account/payments/reports, and user doctors/search/payments were all rendering it as unstyled plain text.
+- **`.mr-table`/`.mr-table-wrap`** was only defined in `pages/user/home.css` — doctor's Patients and Prescriptions tables, **admin's Users table**, and user's Reports and Schedule tables were rendering as completely unstyled raw HTML `<table>`s (no borders, no header treatment, no row striping). The admin Users table in particular is a page every admin visits regularly.
+- **`.mr-card-heading`/`.mr-card-heading-row`** was duplicated identically across 12 separate page CSS files instead of defined once — doctor's Prescriptions page and user's Help & FAQ page never got a local copy and rendered unstyled sub-headings.
+- **`.mr-textarea`**, **`.mr-doctor-card`/`-avatar`/`-main`**, **`.mr-filter-select`**, **`.mr-rate-bar`/`.mr-rate-bar-fill`** — same duplicated-but-gapped pattern, smaller blast radius each but the same root cause.
+- Also fixed two bugs introduced in §23 itself: `.mr-doctor-fee` had been defined in `pages/user/payments/payments.css` instead of `pages/user/doctors/doctors.css` (the only page that actually uses the class), so it was silently never applying; and `pages/user/schedule/schedule.css` was missing a `.mr-medicine-card-main` rule entirely (not a duplication bug, just never written), so the medicine-card's action buttons didn't get pushed to the card's right edge on wide screens.
+
+**Fix, consistent with the project's own established pattern:** every one of the classes above was consolidated into `shared/components.css` as the single source of truth, with the now-redundant per-page copies removed. `design.md`'s own stated rule ("if a component is used on more than one page, its styles belong in components.css") was the guide for what got promoted vs. left page-local — `.mr-medicine-rate-item` and `.mr-snooze-form`, both flagged by the initial audit pass, turned out to be false positives (covered by a parent's `gap`/a generic descendant selector respectively) and were correctly left alone rather than "fixed" with unnecessary CSS.
+
+**Doctor earnings — added to the dashboard, not just the dedicated page.** `pages/doctor/home.php` gained a fourth stat card ("Total earnings", sum of `payments` where `payee_id` = the doctor and `status = 'paid'`) and a "Recent payments received" preview list (mirroring the existing "Recent connection requests" pattern), both linking to the existing `pages/doctor/payments/payments.php`. The stat-card grid's rendering was generalized to optionally wrap a card in `<a>` instead of `<div>` when a `href` key is present — CSS Grid's blockification means an anchor behaves identically to a div as a grid item, so no layout changes were needed, just a small hover affordance (`border-color`/`translateY`) added to `shared/components.css` for `a.mr-stat-card` specifically.
+
+**Admin financial statistics — `pages/admin/payments/payments.php` rebuilt from a plain transaction list into a real stats page:**
+- Total platform revenue, this-month revenue (+ payment count), transaction count, and average payment — four stat cards.
+- A new **revenue-by-doctor breakdown**: each doctor's total earned and payment count, with a proportional bar relative to the top earner (reusing the `.mr-rate-bar` pattern from the Reports page's per-medicine breakdown, now promoted to `shared/components.css` since it's used on 2 pages).
+- The existing full transaction table kept, below the breakdown.
+- `pages/admin/home.php` gained a fifth stat card ("Platform revenue", linking to the new page), using the same optional-link stat-card pattern added for the doctor dashboard.
+- Admin sidebar's "Payments" label renamed to "Financial Stats" to match the page's new scope.
+- Deliberately did **not** add a chart/graph library for this — the README (§1) explicitly notes Chart.js is used only on the user Reports page and nowhere else in the project; the revenue-by-doctor bars use the same lightweight CSS-only pattern already established, not a new dependency.
+
+**A documentation bug fixed in passing:** the CHANGELOG's own "What's next" section heading was accidentally deleted when §23 was added in the previous session — the heading is restored below, content updated to reflect that payments and this styling pass are both now done.
+
+**Verified live**, not just read: full regression sweep across all 21 pages spanning all three roles (patient/doctor/admin) — every page 200, zero PHP warnings/errors/notices in the server log; CSS brace-balance check across every stylesheet in the project (no orphaned rules from the consolidation edits); confirmed the admin Users table specifically now renders with real borders/header styling by inspecting the served HTML against the updated `shared/components.css`; confirmed the doctor dashboard's new earnings card and admin dashboard's new revenue card show live, correct figures matching the `payments` table ($25 for Dr. Rahul Nair, $105 platform-wide, $80/$25 split on the admin revenue-by-doctor breakdown); confirmed the database's row counts (`payments`, `doctor_connections`, `notifications`) were unchanged by this pass — no test data was written this time, since everything was read-only verification of existing seeded data.
+
+**Also checked, per explicit request, and left untouched because it was already correct:** the "missed dose" display feature (an `upcoming` dose past its scheduled time displaying as "Missed" without changing the stored status) was verified present and working in all four places it should be — `pages/user/schedule/schedule.php`, `pages/user/home.php`, `pages/doctor/patients/patients.php`, and `pages/user/reports.php` (both its trend-chart query and its calendar-view query use an `effective_status` computed column for exactly this). Confirmed live against two genuinely-overdue `upcoming` rows already in the seed data (`dose_logs` ids 28 and 33, both for `testpatient`) — both display as "Missed" on the Schedule page and the Dashboard while `dose_logs.status` itself remains `upcoming` in the database, exactly as designed in §3.4. No code changes made for this item.
+
+---
 
 ## What's next (not yet built)
 
@@ -488,16 +671,28 @@ All three sides — patient (§10–§18), doctor (§19), and admin (§20) —
 are now functionally complete. Every sidebar link across all three
 resolves to a real, tested page, and every `role` value in the `users`
 enum has somewhere to log in to. The five small approved additions
-(§21) are also done. What's left:
+(§21) are also done. A Payments round (§23) added consultation fees,
+pay-to-connect, and financial visibility for doctors/admin; a follow-up
+pass (§24) fixed a widespread styling-consolidation bug and expanded
+that financial visibility further. What's left:
 
 - Email/SMS notifications — preferences are collected on all three
   sides (§12, §19, §20) but nothing actually sends anything yet
   (PHPMailer, Fast2SMS/Twilio)
 - Missed-dose detection via cron job (today's dose rows are created
   automatically — see §10 — but nothing yet auto-flips an overdue
-  'upcoming' row to 'missed'; note this is distinct from §21's snooze
-  feature, which only pushes a dose's time back on explicit user action)
+  'upcoming' row to 'missed' in the database; the *display* already
+  shows "Missed" for these everywhere, per §24's verification — this
+  item is specifically about the stored value, a deliberate design
+  choice per §3.4, not a bug)
 - Prescription text extraction / OCR (upload + storage is done, §14)
 - If a caretaker-manages-multiple-patients relationship is ever wanted
   (see §18), it needs a real relationship table before any UI for it —
   the current `users.role` enum has no caretaker role
+- Folding the existing prescription-request fee (§3.10) into the newer
+  general `payments` ledger (§23) — reserved for in the schema
+  (`type = 'prescription_request'`) but not migrated, to avoid risking
+  a working feature
+- A real payment gateway, if ever wanted — everything in §23/§24 is
+  simulated by design (§7/§8)
+

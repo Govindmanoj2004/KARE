@@ -1,0 +1,7 @@
+/* =========================================================================
+   Kare — Doctor Earnings (payments received)
+   Note: .mr-table/.mr-table-wrap/.mr-medicine-card-name/.mr-card-heading
+   are all defined in shared/components.css (single source of truth,
+   fixed for the whole app during a styling-audit pass) -- this page
+   currently needs no styles of its own beyond that.
+   ========================================================================= */

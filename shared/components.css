@@ -699,6 +699,22 @@
   margin-top: 2px;
 }
 
+/* .mr-medicine-card-name: the bold "title line" used for a card/row's main
+   label -- a medicine name, a doctor/patient name, a stat-card value, a
+   receipt field. Was previously only defined in
+   pages/user/prescriptions/prescriptions.css and
+   pages/user/schedule/schedule.css, so every other page using it (doctor
+   dashboard/patients/account/requests/payments, admin
+   dashboard/account/payments/reports, user doctors/search/payments) was
+   rendering it as unstyled plain text -- same "moved to shared" bug class
+   as .mr-stat-grid/.mr-stat-card documented in CHANGELOG's September 2026
+   batch. Moved here as the single source of truth; removed from the two
+   page CSS files that used to duplicate it. */
+.mr-medicine-card-name {
+  font-weight: 600;
+  font-size: var(--text-base);
+}
+
 .mr-profile-badges {
   display: flex;
   gap: 8px;
@@ -779,6 +795,33 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-panel);
   padding: 20px;
+}
+
+a.mr-stat-card {
+  display: block;
+  transition: border-color var(--ease), transform var(--ease-transform);
+}
+
+a.mr-stat-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+/* .mr-rate-bar/.mr-rate-bar-fill: a thin progress/percentage bar. Was only
+   defined in pages/user/reports.css (per-medicine adherence rate); now
+   also reused by admin's revenue-by-doctor breakdown, so moved here. */
+.mr-rate-bar {
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  overflow: hidden;
+}
+
+.mr-rate-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .mr-stat-card-top {
@@ -895,6 +938,125 @@
   font-size: 32px;
   color: var(--accent);
   opacity: 0.6;
+}
+
+/* =========================================================================
+   DATA TABLE (.mr-table / .mr-table-wrap)
+   Was previously only defined in pages/user/home.css, so every other page
+   using the same markup -- doctor's My Patients & Prescriptions tables,
+   admin's Users table, user's Reports history table and Schedule medicine
+   list -- rendered a completely unstyled raw HTML <table> (no borders,
+   no header treatment, no row striping). Same "moved to shared" bug class
+   as .mr-stat-grid/.mr-stat-card (CHANGELOG's September 2026 batch).
+   Moved here as the single source of truth.
+   ========================================================================= */
+
+.mr-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--border);
+}
+
+.mr-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.mr-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--layout-bg);
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mr-table tbody tr {
+  height: 60px;
+  opacity: 0.75;
+  transition:
+    opacity var(--ease),
+    background-color var(--ease);
+}
+
+.mr-table tbody tr:nth-child(odd) {
+  background: var(--surface-raised);
+}
+
+.mr-table tbody tr:hover {
+  opacity: 1;
+}
+
+.mr-table tbody td {
+  font-size: var(--text-md);
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* .mr-card-heading / .mr-card-heading-row: the small bold sub-heading used
+   above a form or list inside a .mr-layout-card (e.g. "Edit details",
+   "Change password", "Today's doses"). Was duplicated identically across
+   12 separate page CSS files rather than defined once -- a few pages
+   (doctor's Prescriptions, user's Help & FAQ) never got a local copy and
+   rendered it as unstyled plain text. Consolidated here as the single
+   source of truth; removed from every page CSS that used to duplicate it. */
+.mr-card-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.mr-card-heading {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+/* .mr-textarea: duplicated identically in 3 page CSS files, missing from
+   others (e.g. user's Prescriptions "request update" dialog) -- same
+   pattern as the other consolidations above. */
+.mr-textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+/* .mr-doctor-card/-avatar/-main: the doctor summary card, originally only
+   on the Doctors directory but now reused by the payments checkout page's
+   order summary too -- moved here since it's shared across >1 page. */
+.mr-doctor-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid rgb(51 46 46 / 10%);
+  border-radius: var(--radius-control, 14px);
+  padding: 16px 20px;
+  flex-wrap: wrap;
+}
+
+.mr-doctor-avatar {
+  width: 48px;
+  height: 48px;
+  font-size: var(--text-md);
+  flex-shrink: 0;
+}
+
+.mr-doctor-main {
+  flex: 1;
+  min-width: 160px;
+}
+
+/* .mr-filter-select: a status-filter <select> that shouldn't stretch full
+   width like a normal .mr-input. Used on admin Users and admin Reports;
+   only the former had it defined locally. */
+.mr-filter-select {
+  width: auto;
+  min-width: 140px;
 }
 
 

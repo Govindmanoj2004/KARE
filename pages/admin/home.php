@@ -35,11 +35,15 @@ $doctorCount   = mr_count($con, "SELECT COUNT(*) AS c FROM users WHERE role = 'd
 $openReports   = mr_count($con, "SELECT COUNT(*) AS c FROM reports WHERE status = 'open'");
 $unverifiedDoc = mr_count($con, "SELECT COUNT(*) AS c FROM users WHERE role = 'doctor' AND is_verified = 0");
 
+$platformRevenueResult = mysqli_query($con, "SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE status = 'paid'");
+$platformRevenue = (float) (mysqli_fetch_assoc($platformRevenueResult)['total'] ?? 0);
+
 $stats = [
     ['icon' => 'ph-users-three',      'value' => (string) $patientCount,  'label' => 'Patients'],
     ['icon' => 'ph-stethoscope',      'value' => (string) $doctorCount,   'label' => 'Doctors'],
     ['icon' => 'ph-flag',             'value' => (string) $openReports,   'label' => 'Open reports'],
     ['icon' => 'ph-shield-warning',   'value' => (string) $unverifiedDoc, 'label' => 'Unverified doctors'],
+    ['icon' => 'ph-chart-line',       'value' => '$' . number_format($platformRevenue, 2), 'label' => 'Platform revenue', 'href' => 'payments/payments.php'],
 ];
 
 // --- Account-status breakdown (a lightweight "system health" view) ----------
@@ -113,13 +117,14 @@ while ($row = mysqli_fetch_assoc($reportsResult)) {
 
                     <div class="mr-stat-grid">
                         <?php foreach ($stats as $i => $stat): ?>
-                            <div class="mr-stat-card" data-mr-scroll-entry style="--index: <?= $i ?>">
+                            <?php $statTag = !empty($stat['href']) ? 'a' : 'div'; ?>
+                            <<?= $statTag ?> class="mr-stat-card" <?= !empty($stat['href']) ? 'href="' . htmlspecialchars($stat['href']) . '"' : '' ?> data-mr-scroll-entry style="--index: <?= $i ?>">
                                 <div class="mr-stat-card-top">
                                     <span class="mr-stat-icon"><i class="ph <?= htmlspecialchars($stat['icon']) ?>"></i></span>
                                 </div>
                                 <div class="mr-stat-value"><?= htmlspecialchars($stat['value']) ?></div>
                                 <div class="mr-stat-label"><?= htmlspecialchars($stat['label']) ?></div>
-                            </div>
+                            </<?= $statTag ?>>
                         <?php endforeach; ?>
                     </div>
 

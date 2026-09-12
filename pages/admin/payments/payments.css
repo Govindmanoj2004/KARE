@@ -1,0 +1,22 @@
+/* =========================================================================
+   Kare — Admin Financial Statistics (revenue-by-doctor breakdown + table)
+   Note: .mr-table/.mr-table-wrap/.mr-medicine-card-name/.mr-card-heading/
+   .mr-rate-bar are all defined in shared/components.css (single source of
+   truth, fixed for the whole app during a styling-audit pass).
+   ========================================================================= */
+
+.mr-revenue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.mr-revenue-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: var(--text-base);
+  font-weight: 500;
+}

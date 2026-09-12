@@ -1,0 +1,98 @@
+/* =========================================================================
+   Kare — Payments (checkout, receipt, history)
+   Note: .mr-table/.mr-table-wrap/.mr-medicine-card-name/.mr-card-heading
+   now live in shared/components.css (single source of truth, fixed for
+   the whole app during a styling-audit pass) -- no local copies needed
+   here anymore. .mr-doctor-fee lives in pages/user/doctors/doctors.css,
+   the only page that actually uses it.
+   ========================================================================= */
+
+/* --- Checkout ----------------------------------------------------------- */
+
+.mr-checkout-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.mr-checkout-summary {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: 20px;
+}
+
+.mr-checkout-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-md);
+  padding: 6px 0;
+  color: var(--text-muted);
+}
+
+.mr-checkout-total {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: var(--text-lg);
+  padding-top: 10px;
+}
+
+.mr-checkout-form {
+  min-width: 0;
+}
+
+/* --- Receipt -------------------------------------------------------------- */
+
+.mr-receipt {
+  max-width: 640px;
+}
+
+.mr-receipt-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.mr-receipt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 24px;
+  padding: 8px 0;
+}
+
+/* Note: .mr-table/.mr-table-wrap now live in shared/components.css
+   (single source of truth, fixed for the whole app) -- removed the
+   local copy that used to live here. */
+
+/* --- Print (receipt) ------------------------------------------------------ */
+
+@media print {
+  .mr-sidebar,
+  .mr-navbar,
+  #toast-container,
+  .mr-modal-overlay,
+  #mr-print-receipt,
+  a.mr-btn-secondary {
+    display: none !important;
+  }
+
+  .mr-app-shell,
+  .mr-main,
+  .mr-content {
+    overflow: visible !important;
+    height: auto !important;
+    display: block !important;
+  }
+}
+
+/* --- Responsive ------------------------------------------------------------ */
+
+@media (max-width: 900px) {
+  .mr-checkout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mr-receipt-grid {
+    grid-template-columns: 1fr;
+  }
+}

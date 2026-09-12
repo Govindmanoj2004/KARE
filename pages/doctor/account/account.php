@@ -18,7 +18,7 @@ require_role('doctor', $mrRootBase);
 $activePage = 'account';
 $doctorId = (int) $_SESSION['user_id'];
 
-$stmt = mysqli_prepare($con, 'SELECT name, email, phone, specialty, notify_email, notify_sms, created_at FROM users WHERE id = ? LIMIT 1');
+$stmt = mysqli_prepare($con, 'SELECT name, email, phone, specialty, consultation_fee, notify_email, notify_sms, created_at FROM users WHERE id = ? LIMIT 1');
 mysqli_stmt_bind_param($stmt, 'i', $doctorId);
 mysqli_stmt_execute($stmt);
 $doctor = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
@@ -36,6 +36,7 @@ unset($_SESSION['account_old']);
 $nameValue = $formOld['name'] ?? $doctor['name'];
 $phoneValue = $formOld['phone'] ?? $doctor['phone'];
 $specialtyValue = $formOld['specialty'] ?? $doctor['specialty'];
+$consultationFeeValue = $formOld['consultation_fee'] ?? $doctor['consultation_fee'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -96,6 +97,11 @@ $specialtyValue = $formOld['specialty'] ?? $doctor['specialty'];
                             <?php if (!empty($doctor['specialty'])): ?>
                                 <span class="mr-badge"><?= htmlspecialchars($doctor['specialty']) ?></span>
                             <?php endif; ?>
+                            <?php if (!empty($doctor['consultation_fee'])): ?>
+                                <span class="mr-badge is-success">$<?= number_format((float) $doctor['consultation_fee'], 2) ?> consultation</span>
+                            <?php else: ?>
+                                <span class="mr-badge">Free consultation</span>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -120,6 +126,11 @@ $specialtyValue = $formOld['specialty'] ?? $doctor['specialty'];
                             <div class="mr-field is-full">
                                 <label class="mr-label" for="specialty">Specialty</label>
                                 <input class="mr-input" type="text" id="specialty" name="specialty" placeholder="e.g. Cardiologist" value="<?= htmlspecialchars($specialtyValue ?? '') ?>">
+                            </div>
+                            <div class="mr-field is-full">
+                                <label class="mr-label" for="consultation_fee">Consultation fee</label>
+                                <input class="mr-input" type="number" id="consultation_fee" name="consultation_fee" min="0" step="0.01" placeholder="e.g. 25.00" value="<?= $consultationFeeValue !== null && $consultationFeeValue !== '' ? htmlspecialchars((string) $consultationFeeValue) : '' ?>">
+                                <p class="mr-field-hint">Patients pay this amount before connecting with you. Leave blank for a free consultation.</p>
                             </div>
                         </div>
                         <div class="mr-form-actions">

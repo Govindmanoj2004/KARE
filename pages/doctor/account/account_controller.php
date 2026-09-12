@@ -42,9 +42,10 @@ $action = $_POST['action'] ?? $_GET['action'] ?? '';
 if ($action === 'update_profile') {
 
     $old = [
-        'name'      => trim($_POST['name'] ?? ''),
-        'phone'     => trim($_POST['phone'] ?? ''),
-        'specialty' => trim($_POST['specialty'] ?? ''),
+        'name'             => trim($_POST['name'] ?? ''),
+        'phone'            => trim($_POST['phone'] ?? ''),
+        'specialty'        => trim($_POST['specialty'] ?? ''),
+        'consultation_fee' => trim($_POST['consultation_fee'] ?? ''),
     ];
 
     $name = $old['name'];
@@ -59,12 +60,21 @@ if ($action === 'update_profile') {
         $errors[] = 'Please enter a valid phone number (7-15 digits, optional +country code).';
     }
 
+    $consultationFee = null;
+    if ($old['consultation_fee'] !== '') {
+        if (!is_numeric($old['consultation_fee']) || (float) $old['consultation_fee'] < 0) {
+            $errors[] = 'Please enter a valid consultation fee (0 or more), or leave it blank for free.';
+        } else {
+            $consultationFee = round((float) $old['consultation_fee'], 2);
+        }
+    }
+
     if (!empty($errors)) {
         back_with_toast('error', $errors, $old);
     }
 
-    $updateStmt = mysqli_prepare($con, 'UPDATE users SET name = ?, phone = ?, specialty = ? WHERE id = ?');
-    mysqli_stmt_bind_param($updateStmt, 'sssi', $name, $phone, $specialty, $doctorId);
+    $updateStmt = mysqli_prepare($con, 'UPDATE users SET name = ?, phone = ?, specialty = ?, consultation_fee = ? WHERE id = ?');
+    mysqli_stmt_bind_param($updateStmt, 'sssdi', $name, $phone, $specialty, $consultationFee, $doctorId);
 
     if (mysqli_stmt_execute($updateStmt)) {
         mysqli_stmt_close($updateStmt);

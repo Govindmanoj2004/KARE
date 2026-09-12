@@ -26,7 +26,7 @@ This README is written to be a complete, standalone reference for continuing dev
 
 ```
 KARE/
-├── index.php                       # Guest/landing page (public entry point) — see §14
+├── index.php                       # Guest/landing page (public entry point) — see §13.3
 ├── guest.css / guest.js            # Landing page styles + fade-in-on-scroll (not part of the dashboard app-shell)
 ├── assets/
 │   ├── connection/
@@ -59,7 +59,9 @@ KARE/
 │   ├── 09_prescription_requests.sql     # prescriptions.issued_by/is_current, new prescription_requests table
 │   ├── 10_seed_prescription_requests.sql # demo data for the above
 │   ├── 11_notifications.sql             # new `notifications` table (in-app bell dropdown, §3.11/§6)
-│   └── db_kare_backup_1-8.sql           # full phpMyAdmin snapshot (schema + data) as of Sep 2 — covers migrations 1–8 only; 09/10/11 still need to run on top — see §3
+│   ├── 12_consultation_payments.sql     # doctor-settable `users.consultation_fee` + new `payments` ledger table (§3.12, §14)
+│   ├── 13_seed_demo_payments.sql        # demo payment data for the above (§3.12, §14)
+│   └── db_kare_backup_1-8.sql           # full phpMyAdmin snapshot (schema + data) as of Sep 2 — covers migrations 1–8 only; 09/10/11/12/13 still need to run on top — see §3
 ├── doc/
 │   └── Abstract.pdf                # original academic project abstract
 ├── pages/
@@ -72,6 +74,7 @@ KARE/
 │   │   ├── reports.php / reports.css / reports.js      # personal adherence analytics (NOT the support-ticket "report") — stat cards, a Chart.js trend chart (§6/§13), per-medicine bar, table/calendar history toggle
 │   │   ├── prescriptions/  (prescriptions.php, prescriptions_controller.php, .css, .js)   # upload/view/download own files, "current prescription" callout, request-update workflow (§3.10, §6)
 │   │   ├── doctors/        (doctors.php, doctors_controller.php, .css, .js)
+│   │   ├── payments/       (checkout.php, payments_controller.php, receipt.php, payments.php, .css, .js)   # pay-to-connect consultation-fee checkout, receipt, payment history (§3.12, §14)
 │   │   ├── messages/       (messages.php, messages_controller.php, messages_poll.php, .css, .js)
 │   │   ├── help.php / help.css / help.js                # static FAQ
 │   │   └── search.php / search.css / search.js          # searches own medicines + prescriptions
@@ -81,11 +84,13 @@ KARE/
 │       ├── patients/       (patients.php, patients_controller.php, .css, .js)
 │       ├── prescriptions/  (prescriptions.php, prescriptions_controller.php, .css, .js)   # fulfill/decline patient requests, ask a patient for an update
 │       ├── messages/       (messages.php, messages_controller.php, messages_poll.php, .css, .js)
+│       ├── payments/       (payments.php, .css, .js)   # read-only earnings view — payments received (§3.12, §14)
 │       └── account/        (account.php, account_controller.php, .css, .js)   # combines profile+settings
 ├── pages/admin/            # ── ADMIN-FACING PAGES ──
 │   ├── home.php / home.css / home.js                    # dashboard: counts, status breakdown, recent reports
 │   ├── users/        (users.php, users_controller.php, .css, .js)      # all users, filter/search, suspend/reactivate, doctor verification
 │   ├── reports/      (reports.php, reports_controller.php, .css, .js)  # reply to patient/doctor support tickets
+│   ├── payments/     (payments.php, .css, .js)   # read-only, all-platform payment transactions (§3.12, §14)
 │   └── account/      (account.php, account_controller.php, .css, .js) # combines profile+settings
 ├── shared/
 │   ├── tokens.css                  # ALL design tokens (colors, radii, spacing) — single source of truth
@@ -122,6 +127,8 @@ Apply migrations from `db/` **in this exact order** — each depends on tables/c
 9. `09_prescription_requests.sql` — adds `prescriptions.issued_by` / `prescriptions.is_current`, and the new `prescription_requests` table (see §3.10). Required for the prescription-request workflow described in §6 and §13.
 10. `10_seed_prescription_requests.sql` — demo data for the above (one fulfilled, one pending request for `testpatient@example.com`). Depends on the `doctor_connections` rows that `08_seed_demo_data.sql` creates (connection ids 101/102/103) — see the snapshot gotcha below if this file fails with a foreign-key error.
 11. `11_notifications.sql` — adds the new `notifications` table (§3.11, §6/§13's in-app notification bell). No dependency on 09/10; can technically run any time after migration 1, but keep it last for a predictable apply order.
+12. `12_consultation_payments.sql` — adds `users.consultation_fee` and the new `payments` table (§3.12). Required for the pay-to-connect consultation-fee workflow described in §14.
+13. `13_seed_demo_payments.sql` — demo data for the above: gives two of the three seeded demo doctors a fee, and seeds `payments` rows against existing (and one new) demo connections. Depends on `08_seed_demo_data.sql`'s connection ids (101/102/103) — same snapshot-order caveat as `10_seed_prescription_requests.sql` below.
 
 **Snapshot gotcha, confirmed while standing up a sandbox from scratch:** `db_kare_backup_1-8.sql` is a snapshot taken *before* `08_seed_demo_data.sql` existed, so importing it does **not** give you the `testpatient`/`kohai` demo connections that `10_seed_prescription_requests.sql` expects (connection ids 101/102/103). If you import the snapshot and then run `09` and `10` directly, `10` will fail with `Cannot add or update a child row: a foreign key constraint fails (prescription_requests, ... FOREIGN KEY (connection_id) REFERENCES doctor_connections)`. Fix: re-run `08_seed_demo_data.sql` explicitly after the snapshot (it's safe to re-run) *before* running `09`/`10` — that creates the missing connection rows and `10` will apply cleanly. The step-by-step order in §10 below already accounts for this by running every file individually rather than relying on the snapshot.
 
@@ -142,6 +149,7 @@ The single accounts table for all three roles. Doctors and patients share this t
 | `notify_email` | tinyint(1), default 1 | notification preference |
 | `notify_sms` | tinyint(1), default 0 | notification preference — **no SMS is actually sent**, preference only |
 | `specialty` | varchar(100), null | **doctor-only** field (e.g. "Cardiologist") |
+| `consultation_fee` | decimal(8,2), null | **doctor-only** field, added in `12_consultation_payments.sql`. `NULL`/unset means a free consultation; a set value is what a patient pays to connect (§3.12, §14) |
 | `password` | varchar(255) | **PLAIN TEXT, not hashed** — deliberate academic-scope tradeoff, documented everywhere it's compared |
 | `role` | enum('patient','doctor','admin') | **no caretaker role exists** |
 | `status` | enum('active','suspended','deactivated'), default 'active' | login blocked unless `active` |
@@ -322,6 +330,27 @@ notifications(
 
 No `notifications` row is ever read or written directly by page controllers other than through `create_notification()` — every write goes through that one helper, so adding a new notification-worthy event elsewhere is a one-line call, not a raw INSERT. See §13 for the exact call sites currently wired up and the request/response shape the shared confirm modal needs when triggering a mark-read action (not applicable here — mark-read is fetch-based, not confirm-modal-based).
 
+### 3.12 `payments`
+
+Added in `12_consultation_payments.sql`, alongside the `users.consultation_fee` column (§3.1). Backs the "pay-to-connect" consultation-fee workflow (§14): a doctor optionally sets a fee on their Account page; a patient pays it up front, before a `doctor_connections` row is even created.
+
+```sql
+payments(
+  id PK,
+  payer_id FK→users.id ON DELETE CASCADE,   -- the patient who paid
+  payee_id FK→users.id ON DELETE CASCADE,   -- the doctor who was paid
+  type enum('consultation', 'prescription_request') default 'consultation',
+  reference_id int null,       -- e.g. doctor_connections.id once created
+  amount decimal(8,2),
+  status enum('pending', 'paid', 'failed') default 'pending',
+  method varchar(50) default 'simulated',
+  paid_at datetime null,
+  created_at datetime
+)
+```
+
+Still simulated, per §7/§8 — no real gateway, no card network is ever contacted. The `type` enum reserves `'prescription_request'` for eventually folding the existing `prescriptions.fee_amount`/`fee_paid` columns (§3.5) into this same ledger, but that migration wasn't done in this pass — the two fee mechanisms currently coexist rather than being unified. Every row today is written with `type = 'consultation'` by `pages/user/payments/payments_controller.php`'s `pay_and_connect` action, which also writes the matching `doctor_connections` row and links `reference_id` back to it in the same transaction. Read (never written) by the three Payments views: `pages/user/payments/payments.php` (patient history, scoped to `payer_id`), `pages/doctor/payments/payments.php` (doctor earnings, scoped to `payee_id`), and `pages/admin/payments/payments.php` (all-platform, no scoping — admin oversight only, no write actions built).
+
 ### Entity relationship summary
 
 ```
@@ -329,12 +358,14 @@ users (role=patient) ─┬─< medicines ─< medicine_schedules ─< dose_logs
                        ├─< prescriptions
                        ├─< reports (support tickets)
                        ├─< notifications
+                       ├─< payments (as payer)
                        ├─(state_id/district_id)→ states/districts
-                       └─< doctor_connections >─┬─ users (role=doctor)
+                       └─< doctor_connections >─┬─ users (role=doctor, has consultation_fee)
                                                  ├─< messages
                                                  ├─< doctor_patient_notes (doctor-only, per patient)
                                                  └─< prescription_requests >─ prescriptions (fulfilled_prescription_id)
 
+users (role=doctor) ─< payments (as payee)
 users (any role) ─< notifications   (not just patients — doctors and admins receive them too)
 ```
 
@@ -436,6 +467,10 @@ This has been verified by testing (not just written) for every module — see CH
 
 New feature = new folder under `pages/user/{feature}/` or `pages/doctor/{feature}/` containing `{feature}.php`, `{feature}_controller.php` (if it writes data), `{feature}.css`, `{feature}.js`. Update the relevant `sidebar.php`'s `$mrNavGroups` array to add the nav link (one array entry, nothing else to touch).
 
+### CSS: check `shared/components.css` before writing a new rule
+
+A recurring, real bug class in this project (documented three separate times now: the September 2026 batch's stat-card fix, §14's own `.mr-doctor-fee` mistake, and §15's wider audit) is a class getting defined in one page's CSS file, then reused on a second page that never actually includes that file — silently rendering unstyled. **Before adding a new CSS class, grep the codebase for it first.** If it's genuinely page-specific (used on exactly one page), a local rule in that page's own `.css` file is fine. If there's any chance a second page will reuse the same markup (a card pattern, a table, a heading style), put the rule in `shared/components.css` from the start rather than duplicating it — `design.md`'s own stated rule is "if a component is used on more than one page, its styles belong in components.css." §15 / CHANGELOG §24 has the full list of classes this bit the project on and were consolidated; don't reintroduce the same duplication pattern for new work.
+
 ---
 
 ## 6. Module Status
@@ -452,28 +487,31 @@ New feature = new folder under `pages/user/{feature}/` or `pages/doctor/{feature
 | Settings | `settings/` | Notification toggles; password-gated account deactivation |
 | Reports (analytics) | `reports.php` | 30-day adherence rate, a Chart.js trend chart of daily taken/missed + adherence-rate line (§13.2), per-medicine breakdown, dose history, table/calendar toggle (both correctly persist "Missed" for an overdue-but-unconfirmed dose — see §7 note below) |
 | Prescriptions | `prescriptions/` | Upload/view/download/delete PDF/JPG/PNG (2MB max); "Current prescription" callout; request an update from a connected doctor, with fee/payment tracking (§3.10) |
-| Doctors | `doctors/` | Browse doctors, send/cancel connection requests |
+| Doctors | `doctors/` | Browse doctors (shows each doctor's free/paid consultation status), send/cancel connection requests; pay-to-connect checkout for doctors with a fee set (§3.12, §14) |
 | Messages | `messages/` | Polling chat with accepted doctor connections |
+| Payments | `payments/` | Consultation-fee checkout, printable receipt, and payment history (§3.12, §14) |
 | Help & Search | `help.php`, `search.php` | Static FAQ; search own medicines/prescriptions |
 
 ### ✅ Completed — Doctor side (`pages/doctor/`)
 
 | Module | Files | What it does |
 |---|---|---|
-| Dashboard | `home.php` | Pending requests / active patients / unread messages stats |
+| Dashboard | `home.php` | Pending requests / active patients / unread messages / total earnings stats, plus a recent-payments preview (§15, §3.12) |
 | Requests | `requests/` | Accept/decline incoming connection requests |
 | My Patients | `patients/` | Connected patients, 30-day adherence badge, read-only today's-doses view (also reflects the "Missed" overdue-display rule), search |
 | Prescriptions | `prescriptions/` | Fulfill or decline prescription-update requests from patients (upload a new file + optional fee); ask a connected patient for an update; view sent-request status (§3.10) |
 | Messages | `messages/` | Same polling chat system, doctor-scoped |
-| Account | `account/` | Combines profile + settings: details, password, notifications, deactivation |
+| Payments | `payments/` | Read-only earnings view — every consultation-fee payment received (§3.12, §14) |
+| Account | `account/` | Combines profile + settings: details, password, notifications, deactivation; consultation fee is set here (§3.12, §14) |
 
 ### ✅ Completed — Admin side (`pages/admin/`)
 
 | Module | Files | What it does |
 |---|---|---|
-| Dashboard | `home.php` | Patient/doctor counts, open reports, unverified doctors, account-status breakdown, recent open reports |
+| Dashboard | `home.php` | Patient/doctor counts, open reports, unverified doctors, platform revenue, account-status breakdown, recent open reports (§15, §3.12) |
 | Users | `users/` | All users, searchable/filterable by role+status; suspend/reactivate; doctor verification toggle. Admin can't change their own status here (routed to Account) |
 | Reports | `reports/` | Reply to support tickets (writes `admin_reply`/`replied_at`/`status`) — two-pane list/detail, filterable by status. Closes the loop with the patient-side "Report an Issue" flow |
+| Payments | `payments/` | Financial statistics — total/monthly revenue, average payment, revenue-by-doctor breakdown, plus the full transaction list (§3.12, §14, §15) |
 | Account | `account/` | Same shape as doctor's Account page, plus a safeguard blocking self-deactivation if it's the last active admin |
 
 ### ✅ Completed — Small approved additions (README §12 / CHANGELOG §21)
@@ -576,14 +614,16 @@ Seeded by the migration files — safe to use for manual testing:
 | `govindmanoj333@gmail.com` | `12345677` | patient |
 | `testpatient@example.com` | `test1234` | patient |
 | `kohai79941@gmail.com` | `12341234` | patient |
-| `anjali.menon@kare-demo.test` | `doctor1234` | doctor (General Physician) |
-| `rahul.nair@kare-demo.test` | `doctor1234` | doctor (Cardiologist) |
-| `sara.thomas@kare-demo.test` | `doctor1234` | doctor (Endocrinologist) |
+| `anjali.menon@kare-demo.test` | `doctor1234` | doctor (General Physician, free consultation) |
+| `rahul.nair@kare-demo.test` | `doctor1234` | doctor (Cardiologist, $25 consultation fee) |
+| `sara.thomas@kare-demo.test` | `doctor1234` | doctor (Endocrinologist, $40 consultation fee) |
 | `admin@kare-demo.test` | `admin1234` | admin |
 
 Freshly-migrated accounts have **no medicines/dose history/connections** seeded — that demo data was only ever created ad hoc during testing, not shipped in the SQL files. To see the app with real data, either use it manually (add a medicine, connect to a doctor) or write your own seed SQL.
 
 **Update:** as of `08_seed_demo_data.sql`/`10_seed_prescription_requests.sql` (see §3), `testpatient@example.com` and `kohai79941@gmail.com` now *do* come with realistic demo data out of the box — medicines, a mix of taken/missed/upcoming doses, doctor connections, messages, a prescription, a support ticket, and a couple of prescription requests. `govindmanoj333@gmail.com` has its own separate ad-hoc data from manual testing (left untouched). The three doctor accounts and admin account have no demo data of their own beyond what the patient-side seeds create via their connections.
+
+**Update:** as of `13_seed_demo_payments.sql` (see §3, §3.12, §14), `testpatient@example.com` has two paid consultation-fee payments on record (to Dr. Rahul Nair and Dr. Sara Thomas), and `kohai79941@gmail.com` has a new accepted connection + payment to Dr. Sara Thomas — so the Payments pages on all three portals show real, non-empty, multi-patient/multi-doctor data out of the box.
 
 ---
 
@@ -606,11 +646,13 @@ Freshly-migrated accounts have **no medicines/dose history/connections** seeded 
    "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\09_prescription_requests.sql
    "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\10_seed_prescription_requests.sql
    "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\11_notifications.sql
+   "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\12_consultation_payments.sql
+   "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\13_seed_demo_payments.sql
    ```
    (No `-p` — XAMPP's default root user has no password, matching `assets/connection/Connection.php`'s hardcoded `root`/empty-password/`db_kare` config.)
 
-   **Shortcut:** `db\db_kare_backup_1-8.sql` is a full snapshot (schema + data as of Sep 2) that replaces the first eight files above in one import — but it **predates** `08_seed_demo_data.sql`'s actual seed rows as well as `09`/`10`/`11`, so all of `08`–`11` still need to run afterward regardless of which path you take. Skipping the `08` re-run before `09`/`10` will make `10_seed_prescription_requests.sql` fail with a foreign-key error — see the "Snapshot gotcha" note in §3.
-4. Verify: `SHOW TABLES;` should list 13 tables (`users`, `states`, `districts`, `reports`, `medicines`, `medicine_schedules`, `dose_logs`, `prescriptions`, `doctor_connections`, `messages`, `doctor_patient_notes`, `prescription_requests`, `notifications`).
+   **Shortcut:** `db\db_kare_backup_1-8.sql` is a full snapshot (schema + data as of Sep 2) that replaces the first eight files above in one import — but it **predates** `08_seed_demo_data.sql`'s actual seed rows as well as `09`–`13`, so all of `08`–`13` still need to run afterward regardless of which path you take. Skipping the `08` re-run before `09`/`10` will make `10_seed_prescription_requests.sql` fail with a foreign-key error — see the "Snapshot gotcha" note in §3.
+4. Verify: `SHOW TABLES;` should list 14 tables (`users`, `states`, `districts`, `reports`, `medicines`, `medicine_schedules`, `dose_logs`, `prescriptions`, `doctor_connections`, `messages`, `doctor_patient_notes`, `prescription_requests`, `notifications`, `payments`).
 5. Browse to `http://localhost/KARE/` for the guest/landing page (§13.3), or straight to `http://localhost/KARE/auth/login/index.php` to skip it — log in as any of the accounts in §9, including `admin@kare-demo.test` for the admin portal at `pages/admin/`.
 
 See §2's note on `start_sandbox.sh` — it's referenced by an earlier revision of this README but not present in this checkout; there's no automatic Linux sandbox script to fall back on, follow the manual steps above (adapted for `mysql`/PHP's built-in server instead of XAMPP paths) if you're not on Windows.
@@ -634,6 +676,8 @@ mysql -u root db_kare < 08_seed_demo_data.sql   # re-run — see the "Snapshot g
 mysql -u root db_kare < 09_prescription_requests.sql
 mysql -u root db_kare < 10_seed_prescription_requests.sql
 mysql -u root db_kare < 11_notifications.sql
+mysql -u root db_kare < 12_consultation_payments.sql
+mysql -u root db_kare < 13_seed_demo_payments.sql
 
 cd ..
 php -S 127.0.0.1:8000 -t .
@@ -649,7 +693,7 @@ php -S 127.0.0.1:8000 -t .
 
 1. **Read `assets/design.md` before writing any new UI** — it defines the exact color/radius/spacing/typography tokens and the checklist every new page must follow (CSS load order, `$activePage`, `$mrRootBase`, session key usage, toast/modal inclusion, scroll-entry animation attributes). It is the single source of truth for visual consistency.
 2. **Read `assets/CHANGELOG.md`** for the *why* behind non-obvious decisions — several sections document bugs that were found and fixed (e.g. session key mismatches, folder-restructure path breakage) specifically so they aren't reintroduced.
-3. **All three portals (patient, doctor, admin) are functionally complete.** Three rounds of work have landed on top of the original modules: the "September 2026 update batch" (doctor signup, the prescription-request workflow, "Missed" display for overdue doses, a redesigned time picker, several shared-CSS fixes, and a widespread `$_POST`/`$_GET` action-dispatch bug fix) and the "October 2026 update batch" (working notifications, a real Chart.js trend chart on Reports, a guest/landing page, and full verification of the confirm-modal action fix — see §13). **Nothing remains in a "not built" state** except what's explicitly out of scope by design (§7's security-hardening exclusions, plus real email/SMS sending, prescription OCR, and a caretaker role — see §6's October-batch note). Any further work from here is genuinely new scope, not a gap to fill in.
+3. **All three portals (patient, doctor, admin) are functionally complete.** Five rounds of work have landed on top of the original modules: the "September 2026 update batch" (doctor signup, the prescription-request workflow, "Missed" display for overdue doses, a redesigned time picker, several shared-CSS fixes, and a widespread `$_POST`/`$_GET` action-dispatch bug fix), the "October 2026 update batch" (working notifications, a real Chart.js trend chart on Reports, a guest/landing page, and full verification of the confirm-modal action fix — see §13), a **Payments round** (doctor-settable consultation fees, pay-to-connect checkout, receipts, and payment history across all three portals — see §14, CHANGELOG §23), and a **styling + financial-visibility round** (a widespread CSS-consolidation bug fix affecting 15+ pages, doctor/admin earnings dashboards, and an admin financial statistics page — see §15, CHANGELOG §24). **Nothing remains in a "not built" state** except what's explicitly out of scope by design (§7's security-hardening exclusions, plus real email/SMS sending, prescription OCR, a real payment gateway, and a caretaker role — see §6's October-batch note and §14). Any further work from here is genuinely new scope, not a gap to fill in.
 4. When adding any new page: follow the folder-per-feature + PRG/toast + ownership-check conventions in §5 exactly — every existing module does, and deviating creates inconsistency an agent reading the codebase later won't expect. For a new *role-specific* area (a 4th role, say), mirror `pages/admin/` + `shared/admin/` + the `require_role()` pattern in §4 rather than inventing a new guard mechanism.
 5. **Test by actually running the app**, not just reading the code — every module in this project was verified via curl/browser against a live PHP+MySQL server, including deliberately trying cross-user and cross-role access to confirm ownership checks actually reject them (e.g. the admin module's "can't suspend yourself" and "can't deactivate the last admin" checks were both verified to actually fire, not just assumed to work). CHANGELOG §22 documents a dedicated edge-case sweep (empty states, malformed input, XSS payloads, upload limits, boundary conditions) beyond just the individual feature tests — worth doing the same for any new work rather than only testing the happy path.
 
@@ -735,10 +779,72 @@ Content: a hero (headline, subcopy, two signup CTAs + a login link, plus a small
 
 See the "✅ Verified" note under §6's September-batch write-up for the full list and results. Summary: every action reachable through the shared confirm modal (`cancel_connection`, `disconnect_patient`, `decline_request`, `decline_ask`, `delete_prescription`, `delete_medicine`) was re-tested with the modal's *exact* request shape (`POST controller.php?action=X&id=Y` with an empty body — not a normal form-encoded POST, which would mask the bug this was meant to catch), and every plain-form action on the remaining patched controllers was smoke-tested too, including the admin "can't deactivate the last admin" safeguard actually firing rather than just existing in code.
 
+---
 
+## 14. Payments — Consultation Fees & Pay-to-Connect (as built)
 
+A follow-up round addressing a real gap: doctors had no way to charge for their time. The only prior money concept was `prescriptions_requests.fee_amount`/`fee_paid` (§3.10) — a fee bolted onto one narrow workflow (a prescription update), simulated, with no ledger, no receipt, no history. This adds a general, doctor-settable **consultation fee**, charged up front before a patient can send a connection request ("pay-to-connect"), plus a proper `payments` ledger and checkout/receipt/history views across all three portals. Full narrative + test log in `assets/CHANGELOG.md` §23; this section is the as-built reference.
 
-## 14. Original To-Do List — Status
+**Schema:** `users.consultation_fee` (nullable, doctor-only, like `specialty`) and a new `payments` table (`db/12_consultation_payments.sql`, §3.12). `NULL`/`0` means free — every existing doctor and connection is unaffected until a doctor opts in.
+
+**Still simulated, per §7/§8** — no real gateway, no card network contacted. The checkout form's card fields are validated for *shape* only (regex: 13–19 digit number, `MM/YY` expiry, 3–4 digit CVC); once they pass, a `payments` row is written straight to `status = 'paid'`. Same spirit as the pre-existing `pay_fee` action on prescription requests.
+
+**Doctor side:** `pages/doctor/account/account_controller.php`'s `update_profile` action gained a `consultation_fee` field alongside `specialty` (optional, validated non-negative). The Account page shows a "Free consultation" or "$X consultation" badge accordingly.
+
+**Patient side:** `pages/user/doctors/doctors.php`'s directory now shows each doctor's fee status. An unconnected doctor with a fee set shows a **"Pay & Connect"** link (to the new `pages/user/payments/checkout.php`) instead of the free "Connect" button — doctors with no fee keep the original free-connect dialog completely unchanged.
+
+`checkout.php` → `pages/user/payments/payments_controller.php`'s `pay_and_connect` action, in one transaction:
+1. Re-validates the doctor server-side (active, verified, has a fee) — never trusts the amount the checkout page rendered from.
+2. Re-checks the `(patient_id, doctor_id)` uniqueness constraint, so a double-submit can't charge twice or create two connections.
+3. Inserts the `payments` row as `paid`.
+4. Inserts the `doctor_connections` row (same effect as the existing free `request_connection` action).
+5. Links `payments.reference_id` to the new connection id.
+6. Notifies the doctor: *"\[Patient\] paid $X and sent you a connection request"* — one notification, reusing the existing `connection_request` type/link.
+
+On success, redirects to a receipt rather than back to the doctors list.
+
+**Receipt & history:**
+- `pages/user/payments/receipt.php` — printable receipt, ownership-checked to the paying patient. "Download" is the browser's own print-to-PDF (`@media print` hides sidebar/navbar/toast) — no new server-side PDF library introduced.
+- `pages/user/payments/payments.php` — patient's payment history (new "Payments" sidebar item, Care group).
+- `pages/doctor/payments/payments.php` — doctor's earnings view (new "Payments" sidebar item), read-only, scoped to `payee_id`.
+- `pages/admin/payments/payments.php` — all-platform transaction list (new "Payments" sidebar item, Management group), read-only, no scoping.
+
+**A pre-existing styling gap, noted but not fixed here:** `.mr-table`/`.mr-table-wrap` is only actually defined in `pages/user/home.css` — `pages/user/reports.css` uses the same classes without defining them, so `reports.php`'s history table has likely been unstyled by default (a narrower case of the stat-card CSS bug from the September batch, §6). This feature's own `pages/*/payments/payments.css` defines its own copy of `.mr-table` rather than assuming `home.css` is already loaded, so the new Payments tables render correctly regardless — flagged here for whoever next touches `reports.css`.
+
+**Demo data** (`db/13_seed_demo_payments.sql`, §3.12): `rahul.nair@kare-demo.test` → $25 fee, `sara.thomas@kare-demo.test` → $40 fee, `anjali.menon@kare-demo.test` stays free. Seeded three `payments` rows against `testpatient`'s existing connections plus one new connection + payment for `kohai` → Dr. Sara Thomas.
+
+**Tested live** (curl, exact request shapes): fee set/update/clear on the doctor Account page; per-doctor branching on the directory (free vs. paid, and that an already-connected doctor shows its existing status regardless of fee); the full checkout → payment → connection → notification → receipt chain for a first-time paid connection, with DB rows confirmed linked correctly; the doctor's notification bell showing the expected unread item; a double-submit against an already-paid/pending doctor correctly rejected with no duplicate row; malformed card input rejected with no `payments` row written; doctor earnings and admin all-payments pages both showing correct aggregated totals across multiple patients/doctors. All test data created during this pass (one throwaway connection/payment/notification) was deleted afterward — the sandbox DB was confirmed back at `13_seed_demo_payments.sql`'s seeded row counts.
+
+**Deliberately not done:** folding the existing prescription-request fee (§3.10) into `payments` (the `type` enum reserves space for it, but the existing flow is left untouched to avoid risking a working feature); refunds; partial payments; a real payment gateway (Stripe/Razorpay or otherwise) — all out of scope per §7/§8 unless asked for.
+
+---
+
+## 15. Styling Audit + Financial Visibility (as built)
+
+A follow-up pass: a user-reported "some elements are shown without style" bug, plus two requests — doctor-facing earnings visibility, and an admin-facing financial statistics page. Full narrative + test log in `assets/CHANGELOG.md` §24; this section is the as-built reference.
+
+**Styling audit.** A systematic check (every page's HTML classes vs. what's actually defined in its included stylesheets, not just the one gap flagged in §14) found the exact "moved to shared" bug class from the September 2026 batch (§6) had recurred repeatedly and much more widely than expected:
+
+| Class | Was missing on | Impact |
+|---|---|---|
+| `.mr-medicine-card-name` | 15 of 17 pages using it | Bold name/heading text rendering as plain unstyled text almost everywhere — doctor dashboard/patients/prescriptions/account/requests/payments, admin dashboard/account/payments/reports, user doctors/search/payments |
+| `.mr-table` / `.mr-table-wrap` | Doctor Patients & Prescriptions, **admin Users**, user Reports & Schedule | Completely unstyled raw `<table>`s — no borders, header treatment, or row striping |
+| `.mr-card-heading` / `-row` | Doctor Prescriptions, user Help & FAQ (duplicated in 12 other files instead of shared) | Unstyled sub-headings |
+| `.mr-textarea`, `.mr-doctor-card/-avatar/-main`, `.mr-filter-select`, `.mr-rate-bar` | Various | Same duplicated-but-gapped pattern, smaller blast radius each |
+
+Fixed the same way the project already fixed the stat-card bug: every class above consolidated into `shared/components.css` as the single source of truth, redundant per-page copies removed. Also fixed two bugs introduced in §14 itself: `.mr-doctor-fee` had been defined in the wrong file (`payments.css` instead of `doctors.css`, the only page using it) so it never applied; and `pages/user/schedule/schedule.css` was missing a `.mr-medicine-card-main` rule entirely, so a medicine card's action buttons didn't get pushed to the card's right edge on wide screens. Two flagged classes (`.mr-medicine-rate-item`, `.mr-snooze-form`) turned out to be false positives — already covered by a parent's `gap` / a generic descendant selector — and were correctly left alone.
+
+**Doctor earnings, added to the dashboard.** `pages/doctor/home.php` gained a fourth stat card ("Total earnings") and a "Recent payments received" preview list, both linking to the existing `pages/doctor/payments/payments.php`. The stat-card grid now optionally renders a card as `<a>` instead of `<div>` when a `href` key is present (CSS Grid blockifies both identically, so no layout changes needed) — same pattern reused on the admin dashboard.
+
+**Admin financial statistics, expanded.** `pages/admin/payments/payments.php` rebuilt from a plain transaction list into: total platform revenue, this-month revenue, transaction count, and average payment (four stat cards); a new **revenue-by-doctor breakdown** with proportional bars (reusing `.mr-rate-bar`, promoted to shared since it's now used on 2 pages); the existing transaction table kept below. `pages/admin/home.php` gained a fifth stat card ("Platform revenue," linking to the new page). Admin sidebar's "Payments" label renamed to "Financial Stats." No chart library was added — the README (§1) notes Chart.js is used only on the user Reports page; the revenue bars use the same lightweight CSS-only pattern already established.
+
+**Tested live:** full regression across all 21 pages spanning all three roles — every page 200, zero PHP errors; CSS brace-balance checked across every stylesheet; confirmed the admin Users table now renders styled; confirmed the new dashboard cards show correct live figures ($25 for Dr. Rahul Nair, $105 platform-wide, $80/$25 revenue-by-doctor split); confirmed no DB rows were altered by this pass (read-only verification against existing seed data).
+
+**Also checked, per explicit request, and left untouched because already correct:** the "Missed" display for an overdue-but-still-`upcoming` dose (§6's September batch feature). Verified present and working in all four claimed locations (`pages/user/schedule/schedule.php`, `pages/user/home.php`, `pages/doctor/patients/patients.php`, `pages/user/reports.php`), confirmed live against two genuinely-overdue rows already in the seed data — both display "Missed" while the stored `dose_logs.status` correctly stays `upcoming`, exactly per §3.4's design. No code changes made for this item.
+
+---
+
+## 16. Original To-Do List — Status
 
 The list below is the project owner's original working to-do list (kept verbatim, typos and all, for traceability against the "as-built" sections above). Every item is now done.
 
@@ -760,3 +866,5 @@ The list below is the project owner's original working to-do list (kept verbatim
 14. ✅ Both patient and user can request for prescription update. Based on scenrios. — Two-way request workflow: patient → doctor and doctor → patient, each with its own fulfillment path (§3.10).
 15. ✅ Generate and design a guest page. where login and signup(both patient and doctor) is connected. — New root `index.php` landing page with CTAs into login and both signup roles (§13.3). *(This item wasn't in the numbered list above but was tracked alongside it in an earlier revision of this README — included here for completeness since it's now done too.)*
 15. Generate and design a guest page. where login and signup(both patient and doctor) is connected.
+16. ✅ Project reviewer feedback: doctors need a way to actually charge for their time (echoing to-do #9's "nothing is free" note, but broader than just prescriptions) — implement something like a payment template. — Doctor-settable consultation fee + pay-to-connect checkout, simulated card-details template, receipt, and payment history across all three portals (§14, CHANGELOG §23).
+17. ✅ Project reviewer feedback: some elements are shown without style — fix and add doctor/admin earnings & financial-statistics visibility; also verify the overdue-dose "Missed" display feature is actually implemented. — Widespread CSS-consolidation fix (15+ pages affected, including the admin Users table), doctor dashboard earnings card + preview, admin financial statistics page with revenue-by-doctor breakdown; the "Missed" display feature was checked and confirmed already correct, left untouched (§15, CHANGELOG §24).

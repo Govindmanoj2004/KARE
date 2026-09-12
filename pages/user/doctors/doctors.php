@@ -28,7 +28,7 @@ $mrRootBase = '../../../'; // this file lives at pages/user/doctors/doctors.php
 // --- All active doctors, with this patient's connection (if any) ------------
 $doctors = [];
 $stmt = mysqli_prepare($con, "
-    SELECT u.id, u.name, u.specialty,
+    SELECT u.id, u.name, u.specialty, u.consultation_fee,
            dc.id AS connection_id, dc.status AS connection_status
     FROM users u
     LEFT JOIN doctor_connections dc ON dc.doctor_id = u.id AND dc.patient_id = ?
@@ -110,6 +110,11 @@ mysqli_stmt_close($stmt);
                                         <?php if (!empty($doc['specialty'])): ?>
                                             <div class="mr-field-hint"><?= htmlspecialchars($doc['specialty']) ?></div>
                                         <?php endif; ?>
+                                        <?php if (!empty($doc['consultation_fee'])): ?>
+                                            <div class="mr-field-hint mr-doctor-fee"><i class="ph ph-currency-circle-dollar"></i> $<?= number_format((float) $doc['consultation_fee'], 2) ?> consultation fee</div>
+                                        <?php else: ?>
+                                            <div class="mr-field-hint mr-doctor-fee">Free consultation</div>
+                                        <?php endif; ?>
                                     </div>
 
                                     <div class="mr-doctor-actions">
@@ -145,6 +150,10 @@ mysqli_stmt_close($stmt);
                                             </button>
                                         <?php elseif ($doc['connection_status'] === 'declined'): ?>
                                             <span class="mr-badge">Declined</span>
+                                        <?php elseif (!empty($doc['consultation_fee'])): ?>
+                                            <a class="mr-btn-secondary" href="../payments/checkout.php?doctor_id=<?= (int) $doc['id'] ?>">
+                                                <i class="ph ph-currency-circle-dollar"></i> Pay &amp; Connect
+                                            </a>
                                         <?php else: ?>
                                             <button type="button" class="mr-btn-secondary"
                                                 data-mr-request-doctor
