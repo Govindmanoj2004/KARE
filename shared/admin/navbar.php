@@ -39,6 +39,26 @@ if (!isset($mrRootBase)) {
     <div class="mr-navbar-spacer"></div>
 
     <div class="mr-navbar-actions">
+        <div class="mr-notif-wrap" data-mr-notif-wrap
+            data-mr-notif-fetch="<?= htmlspecialchars($mrRootBase . 'shared/notifications/notifications_fetch.php') ?>"
+            data-mr-notif-mark="<?= htmlspecialchars($mrRootBase . 'shared/notifications/notifications_controller.php') ?>"
+            data-mr-root-base="<?= htmlspecialchars($mrRootBase) ?>">
+            <button type="button" class="mr-icon-btn" data-mr-notif-btn aria-haspopup="true" aria-expanded="false" aria-label="Notifications">
+                <i class="ph ph-bell"></i>
+                <span class="mr-dot" data-mr-notif-dot hidden></span>
+            </button>
+            <div class="mr-popover mr-notif-popover" role="menu">
+                <div class="mr-notif-header">
+                    <span>Notifications</span>
+                    <button type="button" class="mr-notif-mark-all" data-mr-notif-mark-all>Mark all read</button>
+                </div>
+                <div class="mr-popover-divider"></div>
+                <div class="mr-notif-list" data-mr-notif-list>
+                    <div class="mr-notif-empty">Loading&hellip;</div>
+                </div>
+            </div>
+        </div>
+
         <div class="mr-avatar-wrap" data-mr-avatar-wrap>
             <button
                 type="button"

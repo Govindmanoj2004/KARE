@@ -32,7 +32,7 @@ $stmt = mysqli_prepare($con, "
            dc.id AS connection_id, dc.status AS connection_status
     FROM users u
     LEFT JOIN doctor_connections dc ON dc.doctor_id = u.id AND dc.patient_id = ?
-    WHERE u.role = 'doctor' AND u.status = 'active'
+    WHERE u.role = 'doctor' AND u.status = 'active' AND u.is_verified = 1
     ORDER BY u.name ASC
 ");
 mysqli_stmt_bind_param($stmt, 'i', $userId);
@@ -56,6 +56,7 @@ mysqli_stmt_close($stmt);
     <link rel="stylesheet" href="../../../shared/base.css">
     <link rel="stylesheet" href="../../../shared/components.css">
     <link rel="stylesheet" href="../../../shared/modal/modal.css">
+    <link rel="stylesheet" href="../../../shared/notifications/notifications.css">
     <link rel="stylesheet" href="../../../shared/toast/toast.css">
     <link rel="stylesheet" href="doctors.css">
 
@@ -188,6 +189,7 @@ mysqli_stmt_close($stmt);
 
     <script src="../../../shared/toast/toast.js"></script>
     <script src="../../../shared/modal/modal.js"></script>
+    <script src="../../../shared/notifications/notifications.js"></script>
     <script src="doctors.js"></script>
 </body>
 

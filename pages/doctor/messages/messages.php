@@ -93,6 +93,7 @@ if ($selected) {
     <link rel="stylesheet" href="../../../shared/base.css">
     <link rel="stylesheet" href="../../../shared/components.css">
     <link rel="stylesheet" href="../../../shared/modal/modal.css">
+    <link rel="stylesheet" href="../../../shared/notifications/notifications.css">
     <link rel="stylesheet" href="messages.css">
 
     <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
@@ -200,6 +201,7 @@ if ($selected) {
     </div>
 
     <script src="../../../shared/modal/modal.js"></script>
+    <script src="../../../shared/notifications/notifications.js"></script>
     <script src="messages.js"></script>
 </body>
 

@@ -23,6 +23,7 @@ if (!isset($mrRootBase)) {
 // for the same pattern).
 $mrPendingRequests = 0;
 $mrUnreadMessages = 0;
+$mrPrescriptionRequests = 0;
 if (isset($con) && isset($_SESSION['user_id'])) {
     $mrDoctorId = (int) $_SESSION['user_id'];
 
@@ -46,6 +47,19 @@ if (isset($con) && isset($_SESSION['user_id'])) {
         $mrUnreadMessages = (int) (mysqli_fetch_assoc(mysqli_stmt_get_result($mrUnreadStmt))['c'] ?? 0);
         mysqli_stmt_close($mrUnreadStmt);
     }
+
+    $mrPrescReqStmt = mysqli_prepare($con, "
+        SELECT COUNT(*) AS c
+        FROM prescription_requests pr
+        JOIN doctor_connections dc ON dc.id = pr.connection_id
+        WHERE dc.doctor_id = ? AND pr.status = 'pending' AND pr.requested_by = 'patient'
+    ");
+    if ($mrPrescReqStmt) {
+        mysqli_stmt_bind_param($mrPrescReqStmt, 'i', $mrDoctorId);
+        mysqli_stmt_execute($mrPrescReqStmt);
+        $mrPrescriptionRequests = (int) (mysqli_fetch_assoc(mysqli_stmt_get_result($mrPrescReqStmt))['c'] ?? 0);
+        mysqli_stmt_close($mrPrescReqStmt);
+    }
 }
 
 $mrNavGroups = [
@@ -60,6 +74,7 @@ $mrNavGroups = [
         'label' => 'Care',
         'items' => [
             ['key' => 'patients', 'label' => 'My Patients', 'icon' => 'ph-users',            'href' => 'patients/patients.php'],
+            ['key' => 'prescriptions', 'label' => 'Prescriptions', 'icon' => 'ph-file-text', 'href' => 'prescriptions/prescriptions.php', 'badge' => $mrPrescriptionRequests > 0 ? $mrPrescriptionRequests : null],
             ['key' => 'messages', 'label' => 'Messages',    'icon' => 'ph-chat-circle-dots', 'href' => 'messages/messages.php', 'badge' => $mrUnreadMessages > 0 ? $mrUnreadMessages : null],
         ],
     ],

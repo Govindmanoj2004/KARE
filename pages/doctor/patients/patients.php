@@ -125,6 +125,7 @@ $statusLabels = [
     <link rel="stylesheet" href="../../../shared/base.css">
     <link rel="stylesheet" href="../../../shared/components.css">
     <link rel="stylesheet" href="../../../shared/modal/modal.css">
+    <link rel="stylesheet" href="../../../shared/notifications/notifications.css">
     <link rel="stylesheet" href="../../../shared/toast/toast.css">
     <link rel="stylesheet" href="patients.css">
 
@@ -223,7 +224,10 @@ $statusLabels = [
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <?php foreach ($p['today'] as $dose): $s = $statusLabels[$dose['status']]; ?>
+                                                    <?php foreach ($p['today'] as $dose):
+                                                        $isOverdue = $dose['status'] === 'upcoming' && strtotime($dose['scheduled_for']) < time();
+                                                        $s = $isOverdue ? $statusLabels['missed'] : $statusLabels[$dose['status']];
+                                                    ?>
                                                         <tr>
                                                             <td><?= htmlspecialchars($dose['name'] . ($dose['dosage'] ? ' ' . $dose['dosage'] : '')) ?></td>
                                                             <td><?= htmlspecialchars(date('g:i A', strtotime($dose['scheduled_for']))) ?></td>
@@ -262,6 +266,7 @@ $statusLabels = [
 
     <script src="../../../shared/toast/toast.js"></script>
     <script src="../../../shared/modal/modal.js"></script>
+    <script src="../../../shared/notifications/notifications.js"></script>
     <script src="patients.js"></script>
 </body>
 

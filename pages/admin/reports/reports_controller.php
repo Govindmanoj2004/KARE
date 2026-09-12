@@ -12,6 +12,7 @@
 session_start();
 require_once __DIR__ . '/../../../assets/connection/Connection.php';
 require_once __DIR__ . '/../../../assets/helpers/auth.php';
+require_once __DIR__ . '/../../../assets/helpers/notifications.php';
 
 require_role('admin', '../../../');
 
@@ -27,7 +28,7 @@ function back_with_toast(string $type, array $messages, ?int $reportId = null): 
     exit;
 }
 
-$action = $_POST['action'] ?? '';
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
 
 // =============================================================================
 // ACTION: reply_report
@@ -48,11 +49,17 @@ if ($action === 'reply_report') {
         $status = 'resolved';
     }
 
-    $findStmt = mysqli_prepare($con, 'SELECT id FROM reports WHERE id = ? LIMIT 1');
+    $findStmt = mysqli_prepare($con, '
+        SELECT r.id, r.user_id, u.role
+        FROM reports r
+        JOIN users u ON u.id = r.user_id
+        WHERE r.id = ?
+        LIMIT 1
+    ');
     mysqli_stmt_bind_param($findStmt, 'i', $reportId);
     mysqli_stmt_execute($findStmt);
-    mysqli_stmt_store_result($findStmt);
-    if (mysqli_stmt_num_rows($findStmt) === 0) {
+    $reportRow = mysqli_fetch_assoc(mysqli_stmt_get_result($findStmt));
+    if (!$reportRow) {
         mysqli_stmt_close($findStmt);
         back_with_toast('error', ['That report could not be found.']);
     }
@@ -65,6 +72,17 @@ if ($action === 'reply_report') {
 
     if (mysqli_stmt_execute($updateStmt)) {
         mysqli_stmt_close($updateStmt);
+        // Only the patient-facing "Report an Issue" page exists today
+        // (README §6) -- link there; a future doctor/admin report page
+        // could extend this by role.
+        $reportLink = $reportRow['role'] === 'patient' ? 'pages/user/report/report.php' : null;
+        create_notification(
+            $con,
+            (int) $reportRow['user_id'],
+            'report_reply',
+            'An admin replied to your support ticket.',
+            $reportLink
+        );
         back_with_toast('success', ['Reply sent.'], $reportId);
     } else {
         mysqli_stmt_close($updateStmt);

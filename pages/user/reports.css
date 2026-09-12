@@ -241,3 +241,10 @@
   align-items: center;
   gap: 6px;
 }
+
+/* Trend chart (Chart.js canvas, see reports.php + reports.js) */
+.mr-chart-wrap {
+  background: var(--surface-raised);
+  border-radius: var(--radius-panel);
+  padding: 20px 16px 12px;
+}

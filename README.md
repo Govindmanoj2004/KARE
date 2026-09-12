@@ -1,6 +1,6 @@
 # KARE (MediRemind) — Developer README
 
-A medication-reminder web app connecting patients and doctors. Patients track medicines, doses, and prescriptions; doctors monitor connected patients and message them. Built as a beginner/academic-scope PHP + MySQL project (procedural `mysqli`, no framework, no ORM — by design).
+A medication-reminder web app connecting patients and doctors. Patients track medicines, doses, and prescriptions; doctors monitor connected patients and message them; both sides get in-app notifications when something needs their attention. A guest landing page at the project root introduces the product and links into login/signup for both roles. Built as a beginner/academic-scope PHP + MySQL project (procedural `mysqli`, no framework, no ORM — by design).
 
 This README is written to be a complete, standalone reference for continuing development — with another AI agent, a different model, or a human — without needing to re-read the whole codebase first. For narrative history (what was built, in what order, and why), see [`assets/CHANGELOG.md`](assets/CHANGELOG.md). For visual/design rules (colors, spacing, component patterns), see [`assets/design.md`](assets/design.md) — that file is the **authoritative style reference** and should be read before building any new UI.
 
@@ -14,6 +14,7 @@ This README is written to be a complete, standalone reference for continuing dev
 | Database | MySQL / MariaDB, accessed via `mysqli` (prepared statements throughout) |
 | Frontend | Plain HTML + CSS + vanilla JS (no build step, no bundler, no framework) |
 | Icons | Phosphor Icons via CDN (`unpkg.com/@phosphor-icons/web@2.1.1`) |
+| Charts | Chart.js via CDN (`cdn.jsdelivr.net/npm/chart.js@4.4.4`) — used only on `pages/user/reports.php`'s trend chart (§13.2); nowhere else in the project |
 | Fonts | Google Fonts "Poppins" (working fallback for the licensed "Euclid Circular B") |
 | Typical local host | XAMPP (Apache + MySQL/MariaDB + PHP) |
 
@@ -25,12 +26,15 @@ This README is written to be a complete, standalone reference for continuing dev
 
 ```
 KARE/
+├── index.php                       # Guest/landing page (public entry point) — see §14
+├── guest.css / guest.js            # Landing page styles + fade-in-on-scroll (not part of the dashboard app-shell)
 ├── assets/
 │   ├── connection/
 │   │   └── Connection.php          # mysqli connection (root, no password, db_kare)
 │   ├── helpers/
 │   │   ├── auth.php                # require_role() — role-based page guard
-│   │   └── dose_logs.php           # ensure_todays_dose_logs() — auto-creates today's doses
+│   │   ├── dose_logs.php           # ensure_todays_dose_logs() — auto-creates today's doses
+│   │   └── notifications.php       # create_notification() — writes a row to the notifications table
 │   ├── uploads/
 │   │   └── prescriptions/{user_id}/{random}.{ext}   # uploaded prescription files
 │   ├── svg/                        # logo, wave, google/facebook icons
@@ -38,14 +42,24 @@ KARE/
 │   └── CHANGELOG.md                # chronological build log with rationale
 ├── auth/
 │   ├── login/            (index.php, controller.php, style.css, script.js)
-│   ├── signup/            (index.php, controller.php, style.css, script.js)
+│   ├── signup/            (index.php, controller.php, style.css, script.js — index.php also
+│   │                        accepts ?role=patient|doctor to preselect the role toggle, used by
+│   │                        the landing page's two signup CTAs)
 │   └── logout.php
 ├── db/
 │   ├── db_kare_backup_16-7.sql         # base schema: `users` table + 3 seed patients
 │   ├── 02_states_districts.sql          # states/districts tables + users.state_id/district_id
 │   ├── 03_seed_states_districts.sql     # seeds 36 states/UTs + 391 districts
 │   ├── 04_reports_and_meds.sql          # reports, medicines, medicine_schedules, dose_logs
-│   └── 05_user_side_modules.sql         # prescriptions, doctor_connections, messages, notify_*/specialty cols, 3 demo doctors
+│   ├── 05_user_side_modules.sql         # prescriptions, doctor_connections, messages, notify_*/specialty cols, 3 demo doctors
+│   ├── 06_admin_module.sql              # seeds the first admin account (no schema changes)
+│   ├── 07_planned_additions.sql         # dose_logs.snooze_count, doctor_patient_notes table
+
+│   ├── 08_seed_demo_data.sql            # realistic demo data for testpatient/kohai (medicines, doses, connections, messages)
+│   ├── 09_prescription_requests.sql     # prescriptions.issued_by/is_current, new prescription_requests table
+│   ├── 10_seed_prescription_requests.sql # demo data for the above
+│   ├── 11_notifications.sql             # new `notifications` table (in-app bell dropdown, §3.11/§6)
+│   └── db_kare_backup_1-8.sql           # full phpMyAdmin snapshot (schema + data) as of Sep 2 — covers migrations 1–8 only; 09/10/11 still need to run on top — see §3
 ├── doc/
 │   └── Abstract.pdf                # original academic project abstract
 ├── pages/
@@ -55,8 +69,8 @@ KARE/
 │   │   ├── profile/        (profile.php, profile_controller.php, get_districts.php, .css, .js)
 │   │   ├── report/         (report.php, report_controller.php, .css, .js)     # "Report an Issue" (support ticket)
 │   │   ├── settings/       (settings.php, settings_controller.php, .css, .js)
-│   │   ├── reports.php / reports.css / reports.js      # personal adherence analytics (NOT the support-ticket "report")
-│   │   ├── prescriptions/  (prescriptions.php, prescriptions_controller.php, .css, .js)
+│   │   ├── reports.php / reports.css / reports.js      # personal adherence analytics (NOT the support-ticket "report") — stat cards, a Chart.js trend chart (§6/§13), per-medicine bar, table/calendar history toggle
+│   │   ├── prescriptions/  (prescriptions.php, prescriptions_controller.php, .css, .js)   # upload/view/download own files, "current prescription" callout, request-update workflow (§3.10, §6)
 │   │   ├── doctors/        (doctors.php, doctors_controller.php, .css, .js)
 │   │   ├── messages/       (messages.php, messages_controller.php, messages_poll.php, .css, .js)
 │   │   ├── help.php / help.css / help.js                # static FAQ
@@ -65,6 +79,7 @@ KARE/
 │       ├── home.php / home.css / home.js               # dashboard
 │       ├── requests/       (requests.php, requests_controller.php, .css, .js)
 │       ├── patients/       (patients.php, patients_controller.php, .css, .js)
+│       ├── prescriptions/  (prescriptions.php, prescriptions_controller.php, .css, .js)   # fulfill/decline patient requests, ask a patient for an update
 │       ├── messages/       (messages.php, messages_controller.php, messages_poll.php, .css, .js)
 │       └── account/        (account.php, account_controller.php, .css, .js)   # combines profile+settings
 ├── pages/admin/            # ── ADMIN-FACING PAGES ──
@@ -78,11 +93,17 @@ KARE/
 │   ├── components.css              # sidebar, navbar, popover, buttons, forms, tables, badges, status pills
 │   ├── toast/       (toast.php, toast.css, toast.js)     # flash-message system (PRG pattern)
 │   ├── modal/       (modal.php, modal.css, modal.js)     # generic confirm-first dialog
-│   ├── user/        (sidebar.php, navbar.php)             # patient nav shell
-│   ├── doctor/      (sidebar.php, navbar.php)             # doctor nav shell
-│   └── admin/       (sidebar.php, navbar.php)             # admin nav shell
-└── start_sandbox.sh                # Linux/bash dev-sandbox launcher (NOT for XAMPP/Windows — see §10)
+│   ├── notifications/                                    # in-app notification bell (§6/§13)
+│   │   ├── notifications_fetch.php     # GET — JSON: unread_count + recent notifications for the session user
+│   │   ├── notifications_controller.php # POST — action=mark_read|mark_all_read
+│   │   ├── notifications.css            # dropdown styling (reuses .mr-popover from components.css)
+│   │   └── notifications.js             # open/close, initial load + 20s poll, click-to-mark-read
+│   ├── user/        (sidebar.php, navbar.php)             # patient nav shell — navbar.php includes the notification bell
+│   ├── doctor/      (sidebar.php, navbar.php)             # doctor nav shell — same
+│   └── admin/       (sidebar.php, navbar.php)             # admin nav shell — same
 ```
+
+**Note on `start_sandbox.sh`:** earlier revisions of this README referenced a `start_sandbox.sh` at the project root for spinning up a Linux dev sandbox automatically. That script is not present in this checkout — if you need one, write it from scratch following §10's manual steps rather than assuming it exists; don't rely on it being there.
 
 ---
 
@@ -97,6 +118,12 @@ Apply migrations from `db/` **in this exact order** — each depends on tables/c
 5. `05_user_side_modules.sql`
 6. `06_admin_module.sql`
 7. `07_planned_additions.sql`
+8. `08_seed_demo_data.sql` — realistic demo data (medicines, dose history, connections, messages, a prescription, a support ticket) for `testpatient@example.com` and `kohai79941@gmail.com`, so a fresh install isn't empty. Safe to re-run (deletes-then-inserts its own rows).
+9. `09_prescription_requests.sql` — adds `prescriptions.issued_by` / `prescriptions.is_current`, and the new `prescription_requests` table (see §3.10). Required for the prescription-request workflow described in §6 and §13.
+10. `10_seed_prescription_requests.sql` — demo data for the above (one fulfilled, one pending request for `testpatient@example.com`). Depends on the `doctor_connections` rows that `08_seed_demo_data.sql` creates (connection ids 101/102/103) — see the snapshot gotcha below if this file fails with a foreign-key error.
+11. `11_notifications.sql` — adds the new `notifications` table (§3.11, §6/§13's in-app notification bell). No dependency on 09/10; can technically run any time after migration 1, but keep it last for a predictable apply order.
+
+**Snapshot gotcha, confirmed while standing up a sandbox from scratch:** `db_kare_backup_1-8.sql` is a snapshot taken *before* `08_seed_demo_data.sql` existed, so importing it does **not** give you the `testpatient`/`kohai` demo connections that `10_seed_prescription_requests.sql` expects (connection ids 101/102/103). If you import the snapshot and then run `09` and `10` directly, `10` will fail with `Cannot add or update a child row: a foreign key constraint fails (prescription_requests, ... FOREIGN KEY (connection_id) REFERENCES doctor_connections)`. Fix: re-run `08_seed_demo_data.sql` explicitly after the snapshot (it's safe to re-run) *before* running `09`/`10` — that creates the missing connection rows and `10` will apply cleanly. The step-by-step order in §10 below already accounts for this by running every file individually rather than relying on the snapshot.
 
 ### 3.1 `users`
 
@@ -183,6 +210,8 @@ dose_logs(
 ```sql
 prescriptions(
   id PK, user_id FK→users.id ON DELETE CASCADE,
+  issued_by enum('patient','doctor') default 'patient',   -- added in 09_prescription_requests.sql
+  is_current tinyint(1) default 0,                        -- added in 09_prescription_requests.sql
   title varchar(150), doctor_name varchar(150) null, notes varchar(255) null,
   file_path varchar(255),           -- e.g. assets/uploads/prescriptions/3/ab12.../file.pdf
   file_original_name varchar(255),
@@ -190,6 +219,8 @@ prescriptions(
 )
 ```
 Files: PDF/JPG/PNG, 2MB max, validated server-side. Stored at `assets/uploads/prescriptions/{user_id}/{32-hex-char-random}.{ext}` and served by **direct static link**, not an access-gated PHP script — the random filename is the only protection (see §7, Known Limitations). **No OCR/text-extraction** — files are stored as-is.
+
+`issued_by` and `is_current` support the prescription-request workflow (§3.10, §6): `issued_by = 'doctor'` marks a row a doctor uploaded on a patient's behalf (still stored under the *patient's* upload folder — same access model as a self-upload); `is_current = 1` marks the one prescription a patient's "Current prescription" callout shows. Only one row per `user_id` should have `is_current = 1` at a time — enforced in application code (both controllers clear the previous current row before setting a new one), not by a DB constraint.
 
 ### 3.6 `doctor_connections`
 
@@ -243,16 +274,68 @@ doctor_patient_notes(
 ```
 Private to the doctor — **never read anywhere on the patient side** (verified by grep + by loading every patient page with a note present and confirming zero occurrences of its content). Rendered as a collapsible panel per patient card on `pages/doctor/patients/`.
 
+### 3.10 `prescription_requests`
+
+Added in `09_prescription_requests.sql`. Either side of an accepted `doctor_connections` pair can start a request; the *other* side fulfills or declines it.
+
+```sql
+prescription_requests(
+  id PK,
+  connection_id FK→doctor_connections.id ON DELETE CASCADE,
+  requested_by enum('patient','doctor'),   -- who started it
+  message varchar(255),
+  status enum('pending','fulfilled','declined') default 'pending',
+  fee_amount decimal(8,2) null,      -- doctor-set fee, optional
+  fee_paid tinyint(1) default 0,     -- patient "pays" — simulated, no real gateway (see §7)
+  fulfilled_prescription_id FK→prescriptions.id ON DELETE SET NULL, null,
+  doctor_note varchar(255) null,     -- currently unused by any UI — reserved for a future decline/fulfill reason
+  requested_at datetime, responded_at datetime null
+)
+```
+
+**Two directions, two different fulfillment paths:**
+- `requested_by = 'patient'` (patient asks their doctor for an updated prescription) → fulfilled by the **doctor**, via `pages/doctor/prescriptions/`'s "Fulfill" dialog: doctor uploads a new file + optional title/fee. This creates a new `prescriptions` row with `issued_by = 'doctor'`, sets it `is_current = 1` (clearing any previous current row for that patient), and links it back via `fulfilled_prescription_id`.
+- `requested_by = 'doctor'` (doctor asks a patient to update their prescription on file) → fulfilled by the **patient**, via the normal upload form on `pages/user/prescriptions/` (now carrying a hidden `fulfill_request_id` when reached by clicking "Upload update" on the incoming ask). Same effect: new `is_current = 1` row, request marked fulfilled.
+
+Declining either direction just sets `status = 'declined'` — no new prescription row. Both decline actions (`decline_request` on the doctor side, `decline_ask` on the patient side) go through the shared confirm modal, same as everywhere else in the app (§5).
+
+`fee_amount`/`fee_paid` implement "there's a fee for this" (to-do request, not a real payment integration): the doctor names a number when fulfilling; the patient sees an "Unpaid"/"Paid" badge and a "Mark as paid" button that just flips `fee_paid` to 1 — no payment processor, no enforcement that blocks anything on non-payment. Consistent with this project's documented no-external-integrations scope (§7).
+
+### 3.11 `notifications`
+
+Added in `11_notifications.sql`. Backs the in-app notification bell in the navbar (§6/§13) — one row per notification event, read by `shared/notifications/notifications_fetch.php` and written by `assets/helpers/notifications.php`'s `create_notification()`.
+
+```sql
+notifications(
+  id PK,
+  user_id FK→users.id ON DELETE CASCADE,
+  type varchar(50),           -- 'connection_request' | 'connection_response' | 'message' |
+                               -- 'prescription_request' | 'report_reply' (free-form; the UI
+                               -- doesn't branch on it today, but it's there for future filtering)
+  body varchar(255),          -- plain-text sentence shown in the dropdown, already user-facing
+  link varchar(255) null,     -- root-relative path e.g. 'pages/user/messages/messages.php',
+                               -- no leading slash; null if there's nowhere useful to link
+  read_at datetime null,      -- set by notifications_controller.php's mark_read/mark_all_read
+  created_at datetime
+)
+```
+
+No `notifications` row is ever read or written directly by page controllers other than through `create_notification()` — every write goes through that one helper, so adding a new notification-worthy event elsewhere is a one-line call, not a raw INSERT. See §13 for the exact call sites currently wired up and the request/response shape the shared confirm modal needs when triggering a mark-read action (not applicable here — mark-read is fetch-based, not confirm-modal-based).
+
 ### Entity relationship summary
 
 ```
 users (role=patient) ─┬─< medicines ─< medicine_schedules ─< dose_logs
                        ├─< prescriptions
                        ├─< reports (support tickets)
+                       ├─< notifications
                        ├─(state_id/district_id)→ states/districts
                        └─< doctor_connections >─┬─ users (role=doctor)
                                                  ├─< messages
-                                                 └─< doctor_patient_notes (doctor-only, per patient)
+                                                 ├─< doctor_patient_notes (doctor-only, per patient)
+                                                 └─< prescription_requests >─ prescriptions (fulfilled_prescription_id)
+
+users (any role) ─< notifications   (not just patients — doctors and admins receive them too)
 ```
 
 ---
@@ -367,8 +450,8 @@ New feature = new folder under `pages/user/{feature}/` or `pages/doctor/{feature
 | Profile | `profile/` | Edit name/email/phone/state/district; change password |
 | Report an Issue | `report/` | Submit support ticket; view own tickets + admin replies |
 | Settings | `settings/` | Notification toggles; password-gated account deactivation |
-| Reports (analytics) | `reports.php` | 30-day adherence rate, per-medicine breakdown, dose history |
-| Prescriptions | `prescriptions/` | Upload/view/delete PDF/JPG/PNG (2MB max) |
+| Reports (analytics) | `reports.php` | 30-day adherence rate, a Chart.js trend chart of daily taken/missed + adherence-rate line (§13.2), per-medicine breakdown, dose history, table/calendar toggle (both correctly persist "Missed" for an overdue-but-unconfirmed dose — see §7 note below) |
+| Prescriptions | `prescriptions/` | Upload/view/download/delete PDF/JPG/PNG (2MB max); "Current prescription" callout; request an update from a connected doctor, with fee/payment tracking (§3.10) |
 | Doctors | `doctors/` | Browse doctors, send/cancel connection requests |
 | Messages | `messages/` | Polling chat with accepted doctor connections |
 | Help & Search | `help.php`, `search.php` | Static FAQ; search own medicines/prescriptions |
@@ -379,7 +462,8 @@ New feature = new folder under `pages/user/{feature}/` or `pages/doctor/{feature
 |---|---|---|
 | Dashboard | `home.php` | Pending requests / active patients / unread messages stats |
 | Requests | `requests/` | Accept/decline incoming connection requests |
-| My Patients | `patients/` | Connected patients, 30-day adherence badge, read-only today's-doses view, search |
+| My Patients | `patients/` | Connected patients, 30-day adherence badge, read-only today's-doses view (also reflects the "Missed" overdue-display rule), search |
+| Prescriptions | `prescriptions/` | Fulfill or decline prescription-update requests from patients (upload a new file + optional fee); ask a connected patient for an update; view sent-request status (§3.10) |
 | Messages | `messages/` | Same polling chat system, doctor-scoped |
 | Account | `account/` | Combines profile + settings: details, password, notifications, deactivation |
 
@@ -402,18 +486,60 @@ New feature = new folder under `pages/user/{feature}/` or `pages/doctor/{feature
 | Calendar view of dose history | `pages/user/reports.php` | Table/Calendar toggle; month grid with prev/next navigation, color-coded per-day dots |
 | Private notes on a patient | `pages/doctor/patients/` | Doctor-only free-text note per connected patient (`doctor_patient_notes` table), never visible to the patient |
 
-### ❌ Not built (pending)
+### ✅ Completed — September 2026 update batch
 
-| Item | Notes |
-|---|---|
-| **Email/SMS sending** | `notify_email`/`notify_sms` preferences are collected and saved on all three sides (patient/doctor/admin) but **nothing sends anything** — no PHPMailer, no Twilio/Fast2SMS integration |
-| **Missed-dose cron job** | No scheduled task exists; `dose_logs.status` only changes via explicit human action (including the snooze feature above, which is manual, not automated detection) |
-| **Prescription OCR** | Files are stored as opaque blobs; no text extraction |
-| **Caretaker role** | `users.role` enum has no caretaker value; a caretaker-manages-multiple-patients relationship would need a new table (there's a documented historical decision to *remove* a "My Patients" nav item from the patient sidebar because it didn't correspond to anything the schema supports — see CHANGELOG §18) |
+A larger round of fixes and features built on top of the original modules above. Listed here as a batch rather than folded into the tables above so it's easy to see what changed in this pass.
 
-The five small features previously listed here (§12) are done — see the "Small approved additions" table above.
+| Item | Where | What it does |
+|---|---|---|
+| Demo data seed | `db/08_seed_demo_data.sql` | Realistic medicines/dose history/connections/messages/prescription/support-ticket for `testpatient@example.com` and `kohai79941@gmail.com`, so a fresh install isn't empty |
+| Shared stat-card CSS | `shared/components.css` | `.mr-stat-grid`/`.mr-stat-card` (and `.mr-layout-card`/`.mr-schedule-empty`) were previously only defined in `pages/user/home.css`, so the identical markup on the doctor dashboard, admin dashboard, and `reports.php` rendered unstyled. Moved to the shared file — this was the "no style" complaint for those pages |
+| Chat send-button icon centering | `shared/components.css` | `.mr-btn` was missing `justify-content: center`; icon-only buttons at a fixed size (the message composer's send button) left-aligned their icon instead of centering it |
+| Reports calendar month-nav bug | `pages/user/reports.php` | Changing months reset the Table/Calendar toggle back to Table. Now round-trips the selected view through the URL (`?view=calendar`) across the prev/next links |
+| "Missed" display for overdue doses | `pages/user/schedule/`, `pages/user/home.php`, `pages/doctor/patients/`, `pages/user/reports.php` | A dose still `upcoming` in the DB but past its scheduled time now **displays** as "Missed" everywhere it's shown (today's-doses tables, dashboard, doctor's read-only view, the reports calendar dots and history table). This is display-only — the stored `dose_logs.status` stays `upcoming` until a human explicitly marks it Taken/Missed, preserving the no-automated-detection design documented in §3.4 |
+| Redesigned reminder-time picker | `pages/user/schedule/` | Replaced the native `<input type="time">` (fiddly HH/MM/AM-PM segments) with three `<select>` dropdowns (hour, 5-minute steps, AM/PM), synced to a hidden field carrying the same `"HH:MM"` value the controller already expected — no backend changes needed |
+| Doctor signup | `auth/signup/` | Patient/Doctor toggle on the signup form; Doctor reveals a required Specialty field. New doctors insert with `is_verified = 0` (self-registered, unverified) rather than `1` |
+| Doctor verification gate on patient-facing directory | `pages/user/doctors/doctors.php` | Now filters on `is_verified = 1`, so a self-registered doctor is invisible to patients until an admin verifies them via `pages/admin/users/` — without this, the new signup flow would have let anyone appear as a legitimate doctor immediately |
+| Download button on prescriptions | `pages/user/prescriptions/` | Added alongside the existing "View" link (which opens the file rather than downloading it) |
+| Prescription-request workflow | `pages/user/prescriptions/`, `pages/doctor/prescriptions/` (new), `db/09_prescription_requests.sql` | Full two-way request/fulfill/decline flow between patient and doctor, with an optional fee. Detailed in §3.10 |
+| **`$_POST`/`$_GET` action bug (12 controllers)** | see detailed writeup below | A real, pre-existing bug affecting confirm-modal-triggered actions app-wide — fixed |
 
-**Explicitly out of scope for this project, by design — not pending, not a gap to fill:** password hashing, file-access gating/streaming, and equivalent security hardening. See §7.
+**The `$_POST['action']` bug, in detail:** the shared confirm modal (`shared/modal/modal.php`) submits a POST request to a URL built from the trigger button's `data-mr-confirm-action` (e.g. `controller.php?action=delete_x&id=5`), but the modal's hidden form has **no input fields at all** — so the POST body is empty. That means `action` only ever arrives via `$_GET`, never `$_POST`. Two controllers (`schedule_controller.php`, `patients_controller.php`) already read `$_POST['action'] ?? $_GET['action'] ?? ''` and worked correctly. Twelve others — including the pre-existing `delete_prescription` action, not something added in this pass — read only `$_POST['action'] ?? ''`, which is **always empty** for any action reached through the confirm modal, silently making that action a no-op (the request still returns 200 and redirects back, so nothing *looks* wrong in the UI; the row just never actually changes). Confirmed via direct curl testing (bypassing the browser/JS entirely) that `delete_prescription` did not delete anything before the fix, and does after it.
+
+Fixed identically in all twelve: `pages/doctor/prescriptions/prescriptions_controller.php`, `pages/doctor/account/account_controller.php`, `pages/doctor/requests/requests_controller.php`, `pages/doctor/messages/messages_controller.php`, `pages/admin/account/account_controller.php`, `pages/admin/reports/reports_controller.php`, `pages/user/prescriptions/prescriptions_controller.php`, `pages/user/doctors/doctors_controller.php`, `pages/user/profile/profile_controller.php`, `pages/user/report/report_controller.php`, `pages/user/settings/settings_controller.php`, `pages/user/messages/messages_controller.php`.
+
+**✅ Verified (update: all twelve controllers re-tested).** Every confirm-modal-triggered action reachable from the patched controllers has now been exercised with the *exact* request shape the shared modal actually sends — `POST` to `controller.php?action=X&id=Y` with an **empty body** (not a normal form POST) — and confirmed against the database that the row actually changed, not just that the page returned a redirect:
+
+- `cancel_connection` (`pages/user/doctors/`) — deletes the `doctor_connections` row. Verified.
+- `disconnect_patient` (`pages/doctor/patients/`) — deletes the `doctor_connections` row. Verified (this controller already read `$_GET` correctly before the fix, per the original note below, but is now confirmed rather than assumed).
+- `decline_request` (`pages/doctor/prescriptions/`) — sets `prescription_requests.status = 'declined'`. Verified.
+- `decline_ask` (`pages/user/prescriptions/`) — sets `prescription_requests.status = 'declined'`. Verified.
+- `delete_prescription` (`pages/user/prescriptions/`) — deletes the `prescriptions` row + file on disk. Verified.
+- `delete_medicine` (`pages/user/schedule/`) — deletes the `medicines` row (cascades schedules + dose_logs). Verified (already-correct controller, confirmed rather than assumed).
+
+The remaining six patched controllers (`pages/doctor/account/`, `pages/admin/account/`, `pages/doctor/requests/`, `pages/doctor/messages/`, `pages/user/messages/`, `pages/admin/reports/`, `pages/user/profile/`, `pages/user/report/`, `pages/user/settings/` — nine files, not six; see below) turned out **not to have any action currently reachable through the shared confirm modal** — a full grep of every `data-mr-confirm-action=` in the codebase turned up only the six actions above (plus `auth/logout.php`, which isn't a data-mutating controller). Every action on those nine files is a plain `<form method="post">` submit with the action carried as a normal hidden field, so `$_POST['action']` was always populated directly regardless of the bug — they were never actually reachable in a broken state from their own page's UI. (The original 12-controller patch list was written defensively, adding the `$_GET` fallback everywhere for consistency even where no current call site needed it — reasonable, just broader than what was strictly exploitable.) All nine were smoke-tested anyway for this pass:
+
+- `update_profile` (`pages/user/profile/`) — verified (wrote a real field change, confirmed in DB).
+- `create_report` (`pages/user/report/`) — verified (submitted a real ticket, confirmed in DB).
+- `update_notifications` (`pages/user/settings/`, `pages/doctor/account/`, `pages/admin/account/`) — verified on all three roles.
+- `deactivate_account` (`pages/user/settings/`, mirrored on doctor/admin account pages) — verified with both a wrong password (correctly rejected) and the correct password (correctly deactivated + logged out), using a disposable throwaway account created via the real signup flow rather than a demo account.
+- Admin's "can't deactivate the last active admin" safeguard — verified it actually blocks the attempt (status stayed `active`) rather than just trusting the code path exists.
+- `respond_request` (`pages/doctor/requests/`, accept/decline) and `send_message` (both messages controllers) and `reply_report` (`pages/admin/reports/`) — verified as part of wiring up notifications (§13); each produced the expected DB row change and the correct notification landed for the other party.
+
+All test data created for this verification pass (throwaway connections, prescriptions, medicines, a throwaway account, a test report) was deleted afterward — the sandbox DB was confirmed back at its original seeded row counts.
+
+### ✅ Completed — October 2026 update batch
+
+A second follow-up round, built on top of the September batch above. Covers everything that was previously listed in the "❌ Not built" table — that table is gone now; every item in it is done. Full as-built details (call sites, data flow, test steps) are in §13.
+
+| Item | Where | What it does |
+|---|---|---|
+| Working notifications | `db/11_notifications.sql`, `assets/helpers/notifications.php`, `shared/notifications/`, all three `navbar.php` files | Real in-app notification bell with unread count, dropdown, and mark-read — wired into 8 real events across both patient and doctor sides (connection requests/responses, messages, prescription requests/fulfillment/decline/fee-paid, report replies). Detailed in §13.1 |
+| Real trend chart on Reports | `pages/user/reports.php`, `pages/user/reports.js`, `pages/user/reports.css` | A genuine time-series chart (Chart.js, loaded via CDN) showing daily taken/missed doses and the adherence-rate trend line over the last 30 days — sits above the existing per-medicine bar and calendar heatmap, doesn't replace either. Detailed in §13.2 |
+| Guest/landing page | `index.php` (project root), `guest.css`, `guest.js` | A public entry point introducing the product, with CTAs into both signup flows (deep-linking the role toggle via `?role=patient`/`?role=doctor`) and into login. Logged-in visitors hitting `/` are redirected straight to their role's dashboard rather than shown a pitch. Detailed in §13.3 |
+| Confirm-modal action verification | see the verified list above | Closed out the "not yet verified" follow-up from the September batch — every confirm-modal-triggered action across the app re-tested with the modal's exact request shape and confirmed against the database |
+
+**Explicitly out of scope for this project, by design — not pending, not a gap to fill:** password hashing, file-access gating/streaming, equivalent security hardening (see §7), real email/SMS sending, prescription OCR, and a caretaker role. These are deliberate scope boundaries, not oversights — don't propose or implement them unless explicitly asked.
 
 ---
 
@@ -457,6 +583,8 @@ Seeded by the migration files — safe to use for manual testing:
 
 Freshly-migrated accounts have **no medicines/dose history/connections** seeded — that demo data was only ever created ad hoc during testing, not shipped in the SQL files. To see the app with real data, either use it manually (add a medicine, connect to a doctor) or write your own seed SQL.
 
+**Update:** as of `08_seed_demo_data.sql`/`10_seed_prescription_requests.sql` (see §3), `testpatient@example.com` and `kohai79941@gmail.com` now *do* come with realistic demo data out of the box — medicines, a mix of taken/missed/upcoming doses, doctor connections, messages, a prescription, a support ticket, and a couple of prescription requests. `govindmanoj333@gmail.com` has its own separate ad-hoc data from manual testing (left untouched). The three doctor accounts and admin account have no demo data of their own beyond what the patient-side seeds create via their connections.
+
 ---
 
 ## 10. Local Setup (XAMPP / Windows)
@@ -474,12 +602,46 @@ Freshly-migrated accounts have **no medicines/dose history/connections** seeded 
    "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\05_user_side_modules.sql
    "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\06_admin_module.sql
    "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\07_planned_additions.sql
+   "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\08_seed_demo_data.sql
+   "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\09_prescription_requests.sql
+   "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\10_seed_prescription_requests.sql
+   "C:\xampp\mysql\bin\mysql.exe" -u root db_kare < db\11_notifications.sql
    ```
    (No `-p` — XAMPP's default root user has no password, matching `assets/connection/Connection.php`'s hardcoded `root`/empty-password/`db_kare` config.)
-4. Verify: `SHOW TABLES;` should list 10 tables (`users`, `states`, `districts`, `reports`, `medicines`, `medicine_schedules`, `dose_logs`, `prescriptions`, `doctor_connections`, `messages`).
-5. Browse to `http://localhost/KARE/auth/login/index.php` — log in as any of the accounts in §9, including `admin@kare-demo.test` for the admin portal at `pages/admin/`.
 
-`start_sandbox.sh` at the project root is a **bash script for a Linux dev sandbox** (used during development to spin up MariaDB + PHP's built-in server from scratch) — it does not apply to XAMPP/Windows and can be ignored or deleted.
+   **Shortcut:** `db\db_kare_backup_1-8.sql` is a full snapshot (schema + data as of Sep 2) that replaces the first eight files above in one import — but it **predates** `08_seed_demo_data.sql`'s actual seed rows as well as `09`/`10`/`11`, so all of `08`–`11` still need to run afterward regardless of which path you take. Skipping the `08` re-run before `09`/`10` will make `10_seed_prescription_requests.sql` fail with a foreign-key error — see the "Snapshot gotcha" note in §3.
+4. Verify: `SHOW TABLES;` should list 13 tables (`users`, `states`, `districts`, `reports`, `medicines`, `medicine_schedules`, `dose_logs`, `prescriptions`, `doctor_connections`, `messages`, `doctor_patient_notes`, `prescription_requests`, `notifications`).
+5. Browse to `http://localhost/KARE/` for the guest/landing page (§13.3), or straight to `http://localhost/KARE/auth/login/index.php` to skip it — log in as any of the accounts in §9, including `admin@kare-demo.test` for the admin portal at `pages/admin/`.
+
+See §2's note on `start_sandbox.sh` — it's referenced by an earlier revision of this README but not present in this checkout; there's no automatic Linux sandbox script to fall back on, follow the manual steps above (adapted for `mysql`/PHP's built-in server instead of XAMPP paths) if you're not on Windows.
+
+### 10.1 Linux sandbox (manual, tested) — Apache-free alternative
+
+No `start_sandbox.sh` exists (see above), but here's the exact sequence that was used to stand up and test this project on a plain Ubuntu container with MariaDB + PHP's built-in server (no Apache, no XAMPP):
+
+```bash
+apt-get install -y php php-cli php-mysqli php-mysql php-mbstring mariadb-server mariadb-client
+# php-mbstring is easy to miss — auth/login/controller.php calls mb_strtolower()
+# and fails with an uncaught Error without it.
+
+mkdir -p /run/mysqld && chown mysql:mysql /run/mysqld
+mysqld_safe --datadir=/var/lib/mysql &        # use setsid+nohup if this needs to outlive the shell
+
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS db_kare CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+cd KARE/db
+mysql -u root db_kare < db_kare_backup_1-8.sql
+mysql -u root db_kare < 08_seed_demo_data.sql   # re-run — see the "Snapshot gotcha" note in §3
+mysql -u root db_kare < 09_prescription_requests.sql
+mysql -u root db_kare < 10_seed_prescription_requests.sql
+mysql -u root db_kare < 11_notifications.sql
+
+cd ..
+php -S 127.0.0.1:8000 -t .
+# then browse (or curl) http://127.0.0.1:8000/ for the landing page,
+# or http://127.0.0.1:8000/auth/login/index.php directly.
+```
+
+`assets/connection/Connection.php`'s hardcoded `root`/no-password/`db_kare` needs no changes for this path either.
 
 ---
 
@@ -487,7 +649,7 @@ Freshly-migrated accounts have **no medicines/dose history/connections** seeded 
 
 1. **Read `assets/design.md` before writing any new UI** — it defines the exact color/radius/spacing/typography tokens and the checklist every new page must follow (CSS load order, `$activePage`, `$mrRootBase`, session key usage, toast/modal inclusion, scroll-entry animation attributes). It is the single source of truth for visual consistency.
 2. **Read `assets/CHANGELOG.md`** for the *why* behind non-obvious decisions — several sections document bugs that were found and fixed (e.g. session key mismatches, folder-restructure path breakage) specifically so they aren't reintroduced.
-3. **All three portals (patient, doctor, admin) are functionally complete, and all five small approved additions (§12) are built.** What's left is the larger not-yet-built items in §6's pending table (email/SMS sending, missed-dose cron, prescription OCR, a caretaker role) — none of which has existing UI scaffolding the way the admin module or the §12 additions did, so expect more schema/design work up front for any of those.
+3. **All three portals (patient, doctor, admin) are functionally complete.** Three rounds of work have landed on top of the original modules: the "September 2026 update batch" (doctor signup, the prescription-request workflow, "Missed" display for overdue doses, a redesigned time picker, several shared-CSS fixes, and a widespread `$_POST`/`$_GET` action-dispatch bug fix) and the "October 2026 update batch" (working notifications, a real Chart.js trend chart on Reports, a guest/landing page, and full verification of the confirm-modal action fix — see §13). **Nothing remains in a "not built" state** except what's explicitly out of scope by design (§7's security-hardening exclusions, plus real email/SMS sending, prescription OCR, and a caretaker role — see §6's October-batch note). Any further work from here is genuinely new scope, not a gap to fill in.
 4. When adding any new page: follow the folder-per-feature + PRG/toast + ownership-check conventions in §5 exactly — every existing module does, and deviating creates inconsistency an agent reading the codebase later won't expect. For a new *role-specific* area (a 4th role, say), mirror `pages/admin/` + `shared/admin/` + the `require_role()` pattern in §4 rather than inventing a new guard mechanism.
 5. **Test by actually running the app**, not just reading the code — every module in this project was verified via curl/browser against a live PHP+MySQL server, including deliberately trying cross-user and cross-role access to confirm ownership checks actually reject them (e.g. the admin module's "can't suspend yourself" and "can't deactivate the last admin" checks were both verified to actually fire, not just assumed to work). CHANGELOG §22 documents a dedicated edge-case sweep (empty states, malformed input, XSS payloads, upload limits, boundary conditions) beyond just the individual feature tests — worth doing the same for any new work rather than only testing the happy path.
 
@@ -512,25 +674,89 @@ New `doctor_patient_notes` table (`07_planned_additions.sql`), `UNIQUE(doctor_id
 ### 12.5 Message "seen" indicator — as built
 `read_at` added to the message `SELECT`s in both `pages/user/messages/messages.php` and `pages/doctor/messages/messages.php` (previously fetched but not selected). A "Seen" checkmark renders under the sender's own **last** message in the thread only, when `read_at IS NOT NULL`. **Known simplification:** this is computed server-side on page load only — `messages_poll.php`'s live-append via `fetch` does not retroactively add the indicator to an already-rendered bubble when the other party reads it without the page reloading, since read-marking itself happens on page load, not via polling. Acceptable for this project's scope; flagged here for whoever extends the polling logic next.
 
+---
+
+## 13. October 2026 Update Batch — Implementation Notes (all built and tested)
+
+As-built reference for the three items that used to be in the "❌ Not built" table (§6), plus the confirm-modal verification sweep. All four were implemented, wired up end-to-end, and tested against a live PHP + MariaDB sandbox during this pass (curl-driven, simulating exact request shapes — see each subsection).
+
+### 13.1 Working notifications — as built
+
+**Schema:** `notifications` table (`db/11_notifications.sql`) — `id`, `user_id` (FK → `users.id`, `ON DELETE CASCADE`), `type` (free-form string, e.g. `'message'`, `'prescription_request'`), `body` (plain-text sentence), `link` (root-relative path, nullable), `read_at` (nullable), `created_at`. See §3.11.
+
+**Write path:** one helper, `assets/helpers/notifications.php`'s `create_notification($con, $userId, $type, $body, $link = null)`. Every controller that needs to notify someone requires this file and calls it — there's no other code path that writes to the table.
+
+**Read path:** `shared/notifications/notifications_fetch.php` (`GET`, session-scoped, no role check needed since it filters by `$_SESSION['user_id']`) returns `{unread_count, notifications: [...]}` for the logged-in user, most recent 20. `shared/notifications/notifications_controller.php` (`POST`, `action=mark_read` + `id=`, or `action=mark_all_read`) marks rows read, scoped to the session user the same ownership-check way every other controller in this app is (§5) — a user can never mark another user's notification as read, verified by testing cross-role.
+
+**UI:** all three `navbar.php` files (`shared/user/`, `shared/doctor/`, `shared/admin/`) got a `.mr-notif-wrap` dropdown next to (or replacing, on the patient side, where it was previously decorative) the bell icon — same `.mr-popover` shell the avatar menu already uses. `shared/notifications/notifications.js` handles open/close, an initial load on page load (so the unread dot is right even before the dropdown is opened), a 20-second poll (lighter than the 3-second chat poll — notifications aren't as latency-sensitive), and click-to-mark-read-then-navigate. `shared/notifications/notifications.css` holds the dropdown-specific styling.
+
+Every page that includes a navbar also needs `shared/notifications/notifications.css` and `.js` — added to all 21 such pages alongside the existing `shared/modal/modal.css`/`.js` includes, same file-per-page convention already used for the toast/modal system.
+
+**Trigger points wired up (8 events, both patient and doctor sides get notified depending on who acted):**
+
+| Event | Controller | Notifies |
+|---|---|---|
+| Patient sends a connection request | `pages/user/doctors/doctors_controller.php` (`request_connection`) | The doctor |
+| Doctor accepts/declines a request | `pages/doctor/requests/requests_controller.php` (`respond_request`) | The patient |
+| Patient sends a chat message | `pages/user/messages/messages_controller.php` (`send_message`) | The doctor |
+| Doctor sends a chat message | `pages/doctor/messages/messages_controller.php` (`send_message`) | The patient |
+| Patient requests a prescription update | `pages/user/prescriptions/prescriptions_controller.php` (`request_update`) | The doctor |
+| Patient fulfills a doctor's "please update" ask | `pages/user/prescriptions/prescriptions_controller.php` (`upload_prescription`, when `fulfill_request_id` is set) | The doctor |
+| Patient declines a doctor's ask | `pages/user/prescriptions/prescriptions_controller.php` (`decline_ask`) | The doctor |
+| Patient marks a prescription fee paid | `pages/user/prescriptions/prescriptions_controller.php` (`pay_fee`) | The doctor |
+| Doctor asks a patient for an update | `pages/doctor/prescriptions/prescriptions_controller.php` (`request_update`) | The patient |
+| Doctor fulfills a patient's request | `pages/doctor/prescriptions/prescriptions_controller.php` (`fulfill_request`) | The patient |
+| Doctor declines a patient's request | `pages/doctor/prescriptions/prescriptions_controller.php` (`decline_request`) | The patient |
+| Admin replies to a support ticket | `pages/admin/reports/reports_controller.php` (`reply_report`) | The patient who filed it |
+
+(Table has 12 rows, not 8 — 8 distinct *events*, some of which appear as both directions of the prescription-request lifecycle.) Each was tested live: performed the action via curl as one account, then confirmed via `notifications_fetch.php` that the *other* account received exactly the expected notification body and link. All test data (temporary connections, prescriptions, medicines, notifications) was cleaned up afterward.
+
+**Deliberately not done:** notifications aren't generated for anything time-based (a dose becoming due, say) — everything wired up is triggered directly by a user action in an existing controller. A due-dose notification would need a cron/polling mechanism this project doesn't have (consistent with §3.4's "no automated missed-detection" design). Not in scope unless asked for.
+
+### 13.2 Real trend chart on Reports — as built
+
+`pages/user/reports.php` already computed a month's worth of calendar data grouped by day; a near-identical query now also computes a **rolling 30-day** window (independent of whatever month the calendar is showing), grouped by day and effective status (same overdue-as-missed display rule as everywhere else, §3.4). PHP zero-fills any day with no doses so the chart always has a full, evenly-spaced 30-point x-axis, then hands the three arrays (`labels`, `taken`, `missed`, plus a computed `rate` per day, `null` when there were zero doses that day so Chart.js's `spanGaps` skips it instead of drawing a false 0%) to the frontend via a `<script type="application/json" id="mr-trend-data">` tag — kept separate from `reports.js` itself so the JS file stays pure JS, no inline PHP mixed in.
+
+Chart.js is loaded via `<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js">` in the page's `<head>` — same no-build, no-bundler CDN pattern already used for Phosphor Icons (§1). `reports.js` reads the JSON script tag and renders a combo chart on a `<canvas id="mr-trend-chart">`: stacked taken/missed bars on a left "Doses" axis, an adherence-rate line on a right "Adherence %" axis. Sits in a new "Trend — last 30 days" panel between the stat-card grid and the existing per-medicine bar — doesn't replace either of those, all three views (per-medicine bar, 30-day trend chart, calendar heatmap) coexist.
+
+When a patient has zero dose history in the window, the canvas and the JSON script tag are both omitted (PHP `if ($total > 0)`) and a "No dose history yet to chart" empty state renders instead — verified there's no dead `#mr-trend-chart`/`#mr-trend-data` reference left behind to trip up the JS in that case.
+
+### 13.3 Guest/landing page — as built
+
+New `index.php` at the **project root** (not a `guest/` subfolder — chosen so `http://localhost/KARE/` just works with no extra path segment), plus `guest.css` and `guest.js` alongside it. Deliberately doesn't include `shared/base.css` or the dashboard app-shell CSS — this is a normal-scrolling public page, not a fixed-height authenticated layout, so it gets its own minimal reset in `guest.css` and reuses only `shared/tokens.css` for color/spacing tokens.
+
+Content: a hero (headline, subcopy, two signup CTAs + a login link, plus a small mock "today's doses" card and the same wave/ocean motif from the login/signup hero — reusing `assets/svg/wave.svg`, not a new asset), a 4-card feature grid, and a final CTA section. `guest.js` is just the fade-in-on-scroll behavior (`IntersectionObserver`), a lighter standalone copy of `base.css`'s scroll-entry system since this page doesn't include that file.
+
+**Logged-in visitors are redirected, not shown the pitch:** `index.php` checks `$_SESSION['user_id']`/`['role']` at the top and sends patient/doctor/admin sessions straight to their own `home.php` — verified for all three roles.
+
+**Signup deep-linking:** the landing page's two signup buttons go to `auth/signup/index.php?role=patient` and `?role=doctor`. `auth/signup/index.php` was given a small addition to support this: it now reads `$_GET['role']` as a fallback default (behind a failed-submit's `old('role', ...)` value, which still wins) for both the hidden `#role` input's initial value and the toggle button's initial `is-active`/`aria-selected` state — `script.js`'s existing `applyRole()` (already called on `DOMContentLoaded` based on the hidden field's value) picks this up with no JS changes needed. Verified `?role=doctor` renders with the Doctor tab pre-selected and the Specialty field visible; no `role` param still defaults to Patient as before.
+
+### 13.4 Confirm-modal action verification — as built
+
+See the "✅ Verified" note under §6's September-batch write-up for the full list and results. Summary: every action reachable through the shared confirm modal (`cancel_connection`, `disconnect_patient`, `decline_request`, `decline_ask`, `delete_prescription`, `delete_medicine`) was re-tested with the modal's *exact* request shape (`POST controller.php?action=X&id=Y` with an empty body — not a normal form-encoded POST, which would mask the bug this was meant to catch), and every plain-form action on the remaining patched controllers was smoke-tested too, including the admin "can't deactivate the last admin" safeguard actually firing rather than just existing in code.
 
 
 
-To do:
-1. Seed demo data.
-2. Some elemets doesnt have design. Check all the ui elements and add style.
-  User module: shedule, Chat with doctor send button icon not centered, reports no style.
-  Doctor module: Dashboard, my patients(todays dose), messages sent icon not aligned,
-3. Admin: dashboard , users 
-4. Doctor signup
-5. Seperate users and doctors in admin view.
-6. If sheduled medicine time is missed show missed.
-7. History of daily shedule, show a the progress in a graphicaly way(in reports, use barchart, linechart etc).
-8. Option to download precription format.
-9. Doctors should update prescription of patients if they ask it through chat like a request. they may need payment for it, nothing is free so.
-10. bug: when i change month in reports calendar the page resets to table.
-11. Update the design of timepicker in schedule.Too confusing.
-12. Wire up the working on notifications.For doctor and user(patient).
-13. Option to view active or current prescription given by the doctor to patient and update.
-14. Both patient and user can request for prescription update.Based on scenrios.
+
+## 14. Original To-Do List — Status
+
+The list below is the project owner's original working to-do list (kept verbatim, typos and all, for traceability against the "as-built" sections above). Every item is now done.
+
+1. ✅ Seed demo data. — `db/08_seed_demo_data.sql` + `10_seed_prescription_requests.sql` (§3, §9).
+2. ✅ Some elemets doesnt have design. Check all the ui elements and add style.
+   User module: shedule, Chat with doctor send button icon not centered, reports no style.
+   Doctor module: Dashboard, my patients(todays dose), messages sent icon not aligned. — Shared stat-card CSS moved to `shared/components.css`; chat send-button icon centering fixed (both in the September batch, §6).
+3. ✅ Admin: dashboard, users — both built (§6, "Completed — Admin side").
+4. ✅ Doctor signup — Patient/Doctor toggle on `auth/signup/`, new doctors inserted unverified (September batch, §6); landing page can also deep-link straight to it (§13.3).
+5. ✅ Seperate users and doctors in admin view. — `pages/admin/users/users.php`'s role filter dropdown (All roles / Patients / Doctors / Admins) already covers this; no separate page was needed.
+6. ✅ If sheduled medicine time is missed show missed. — "Missed" display for overdue doses, everywhere a dose list is shown (September batch, §6).
+7. ✅ History of daily shedule, show a the progress in a graphicaly way(in reports, use barchart, linechart etc). — Real Chart.js trend chart on `reports.php` (§13.2), alongside the existing per-medicine bar and calendar heatmap.
+8. ✅ Option to download precription format. — Download button on `pages/user/prescriptions/`, alongside the existing "View" link (September batch, §6).
+9. ✅ Doctors should update prescription of patients if they ask it through chat like a request. they may need payment for it, nothing is free so. — Full two-way prescription-request workflow with an optional fee (§3.10, §6); doctor and patient notify each other via the notification bell when a request is made, fulfilled, declined, or paid (§13.1). ("Through chat" specifically wasn't built — requests go through the dedicated Prescriptions pages, not the chat thread — but the request/fulfill/decline/fee lifecycle itself is fully built both directions.)
+10. ✅ bug: when i change month in reports calendar the page resets to table. — Fixed by round-tripping the selected view through the URL (`?view=calendar`) across the prev/next links (September batch, §6).
+11. ✅ Update the design of timepicker in schedule. Too confusing. — Replaced with three `<select>` dropdowns (hour / 5-minute steps / AM-PM) synced to a hidden field (September batch, §6).
+12. ✅ Wire up the working on notifications. For doctor and user(patient). — Full notification system: table, helper, shared fetch/mark-read endpoints, navbar dropdown on all three portals, wired into 8 real events covering both patient and doctor sides (§13.1).
+13. ✅ Option to view active or current prescription given by the doctor to patient and update. — "Current prescription" callout on `pages/user/prescriptions/`, set/cleared automatically whenever a new prescription becomes current (§3.5, §6).
+14. ✅ Both patient and user can request for prescription update. Based on scenrios. — Two-way request workflow: patient → doctor and doctor → patient, each with its own fulfillment path (§3.10).
+15. ✅ Generate and design a guest page. where login and signup(both patient and doctor) is connected. — New root `index.php` landing page with CTAs into login and both signup roles (§13.3). *(This item wasn't in the numbered list above but was tracked alongside it in an earlier revision of this README — included here for completeness since it's now done too.)*
 15. Generate and design a guest page. where login and signup(both patient and doctor) is connected.
-16. 

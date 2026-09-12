@@ -9,6 +9,12 @@ function old(string $key, array $old): string
 {
   return htmlspecialchars($old[$key] ?? '', ENT_QUOTES, 'UTF-8');
 }
+
+// Landing-page CTAs deep-link here as signup/index.php?role=doctor so the
+// role toggle opens on the right tab. A failed-submit's old() value still
+// wins over this (see the value="" below).
+$mrGetRole = $_GET['role'] ?? '';
+$mrDefaultRole = in_array($mrGetRole, ['patient', 'doctor'], true) ? $mrGetRole : 'patient';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -51,6 +57,16 @@ function old(string $key, array $old): string
         </svg>
         <h3>Create your account</h3>
 
+        <div class="signup-9-role-toggle" role="tablist" aria-label="Account type">
+          <button type="button" class="signup-9-role-btn<?= $mrDefaultRole === 'patient' && old('role', $old) === '' ? ' is-active' : '' ?>" data-mr-role-btn="patient" role="tab" aria-selected="<?= $mrDefaultRole === 'patient' ? 'true' : 'false' ?>">
+            Patient
+          </button>
+          <button type="button" class="signup-9-role-btn<?= $mrDefaultRole === 'doctor' && old('role', $old) === '' ? ' is-active' : '' ?>" data-mr-role-btn="doctor" role="tab" aria-selected="<?= $mrDefaultRole === 'doctor' ? 'true' : 'false' ?>">
+            Doctor
+          </button>
+        </div>
+        <input type="hidden" id="role" name="role" value="<?= old('role', $old) ?: $mrDefaultRole ?>" />
+
         <!-- <div class="signup-9-socials">
           <button type="button" class="signup-9-social-btn" id="google-btn">
             <img src="../../assets/svg/google.svg" alt="Google" />
@@ -66,6 +82,8 @@ function old(string $key, array $old): string
         <input type="text" placeholder="Full Name" id="name" name="name" value="<?= old('name', $old) ?>" required />
         <input type="email" placeholder="Email" id="email" name="email" value="<?= old('email', $old) ?>" required />
         <input type="tel" placeholder="Phone (e.g. +91XXXXXXXXXX)" id="phone" name="phone" value="<?= old('phone', $old) ?>" required />
+        <input type="text" placeholder="Specialty (e.g. Cardiologist)" id="specialty" name="specialty" value="<?= old('specialty', $old) ?>" data-mr-specialty-field style="display: none;" />
+
         <input type="password" placeholder="Password" id="password" name="password" required minlength="8" />
         <input type="password" placeholder="Confirm Password" id="confirm_password" name="confirm_password" required minlength="8" />
 

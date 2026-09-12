@@ -32,11 +32,14 @@ $currentUser = [
 ];
 
 // --- Stats: doses due today / taken this week / missed doses --------------
+// (A 4th "Patients in your care" card previously lived here — a leftover
+// from an earlier caretaker-role concept that was otherwise fully removed
+// from the patient side; see README §6/CHANGELOG §18. Hardcoded to '1' and
+// never wired to a real query, so it's been dropped rather than fixed.)
 $stats = [
     ['icon' => 'ph-pill',           'value' => '0', 'label' => 'Doses due today'],
     ['icon' => 'ph-check-circle',   'value' => '0', 'label' => 'Taken this week'],
     ['icon' => 'ph-warning-circle', 'value' => '0', 'label' => 'Missed doses'],
-    ['icon' => 'ph-users-three',    'value' => '1', 'label' => 'Patients in your care'],
 ];
 
 $dueTodayStmt = mysqli_prepare($con, "
@@ -99,6 +102,10 @@ while ($row = mysqli_fetch_assoc($scheduleResult)) {
         'medicine' => $medicineLabel,
         'time'     => date('g:i A', strtotime($row['scheduled_for'])),
         'status'   => $row['status'],
+        // Display-only: an 'upcoming' dose whose time has passed shows as
+        // Missed (to-do #6) without changing the stored status — see the
+        // matching comment in pages/user/schedule/schedule.php.
+        'is_overdue' => $row['status'] === 'upcoming' && strtotime($row['scheduled_for']) < time(),
     ];
 }
 mysqli_stmt_close($scheduleStmt);
@@ -123,6 +130,7 @@ $statusLabels = [
     <link rel="stylesheet" href="../../shared/base.css">
     <link rel="stylesheet" href="../../shared/components.css">
     <link rel="stylesheet" href="../../shared/modal/modal.css">
+    <link rel="stylesheet" href="../../shared/notifications/notifications.css">
     <link rel="stylesheet" href="home.css">
 
     <!-- Icons: Phosphor (regular weight) -->
@@ -199,7 +207,7 @@ $statusLabels = [
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($todaysSchedule as $row): $s = $statusLabels[$row['status']]; ?>
+                                    <?php foreach ($todaysSchedule as $row): $s = $row['is_overdue'] ? $statusLabels['missed'] : $statusLabels[$row['status']]; ?>
                                         <tr>
                                             <td><?= htmlspecialchars($row['patient']) ?></td>
                                             <td><?= htmlspecialchars($row['medicine']) ?></td>
@@ -220,6 +228,7 @@ $statusLabels = [
 
     <script src="home.js"></script>
     <script src="../../shared/modal/modal.js"></script>
+    <script src="../../shared/notifications/notifications.js"></script>
 </body>
 
 </html>

@@ -54,6 +54,7 @@ mysqli_stmt_close($stmt);
     <link rel="stylesheet" href="../../../shared/base.css">
     <link rel="stylesheet" href="../../../shared/components.css">
     <link rel="stylesheet" href="../../../shared/modal/modal.css">
+    <link rel="stylesheet" href="../../../shared/notifications/notifications.css">
     <link rel="stylesheet" href="../../../shared/toast/toast.css">
     <link rel="stylesheet" href="requests.css">
 
@@ -142,6 +143,7 @@ mysqli_stmt_close($stmt);
 
     <script src="../../../shared/toast/toast.js"></script>
     <script src="../../../shared/modal/modal.js"></script>
+    <script src="../../../shared/notifications/notifications.js"></script>
     <script src="requests.js"></script>
 </body>
 

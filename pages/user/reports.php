@@ -47,6 +47,48 @@ $upcoming = (int) ($summary['upcoming'] ?? 0);
 $countedDoses = $taken + $missed; // adherence excludes doses still upcoming
 $adherenceRate = $countedDoses > 0 ? round(($taken / $countedDoses) * 100) : null;
 
+// --- Daily trend (last 30 days) for the adherence chart -----------------------
+// README §6 "Not built" -> a real bar/line chart of dose history (the
+// per-medicine bar above and the calendar below are useful but aren't a
+// time-series view). Reuses the same overdue-as-missed display rule as the
+// calendar/schedule/home pages, grouped by day instead of by month.
+$trendDays = []; // 'YYYY-MM-DD' => ['taken' => n, 'missed' => n]
+$trendStmt = mysqli_prepare($con, "
+    SELECT
+        DATE(dl.scheduled_for) AS day,
+        CASE WHEN dl.status = 'upcoming' AND dl.scheduled_for < NOW() THEN 'missed' ELSE dl.status END AS effective_status,
+        COUNT(*) AS c
+    FROM dose_logs dl
+    JOIN medicine_schedules ms ON ms.id = dl.schedule_id
+    JOIN medicines m ON m.id = ms.medicine_id
+    WHERE m.user_id = ? AND dl.scheduled_for >= (CURDATE() - INTERVAL 29 DAY)
+      AND (dl.status IN ('taken', 'missed') OR (dl.status = 'upcoming' AND dl.scheduled_for < NOW()))
+    GROUP BY DATE(dl.scheduled_for), effective_status
+");
+mysqli_stmt_bind_param($trendStmt, 'i', $userId);
+mysqli_stmt_execute($trendStmt);
+$trendResult = mysqli_stmt_get_result($trendStmt);
+while ($row = mysqli_fetch_assoc($trendResult)) {
+    $trendDays[$row['day']][$row['effective_status']] = (int) $row['c'];
+}
+mysqli_stmt_close($trendStmt);
+
+// Fixed 30-day arrays (oldest -> newest), zero-filling days with no doses,
+// so the chart always has a full, evenly-spaced x-axis.
+$trendLabels = [];
+$trendTaken = [];
+$trendMissed = [];
+$trendRate = [];
+for ($i = 29; $i >= 0; $i--) {
+    $d = date('Y-m-d', strtotime("-{$i} days"));
+    $trendLabels[] = date('d M', strtotime($d));
+    $t = $trendDays[$d]['taken'] ?? 0;
+    $m = $trendDays[$d]['missed'] ?? 0;
+    $trendTaken[] = $t;
+    $trendMissed[] = $m;
+    $trendRate[] = ($t + $m) > 0 ? round(($t / ($t + $m)) * 100) : null;
+}
+
 // --- Per-medicine breakdown ---------------------------------------------------
 $byMedicine = [];
 $medStmt = mysqli_prepare($con, "
@@ -74,13 +116,17 @@ while ($row = mysqli_fetch_assoc($medResult)) {
 mysqli_stmt_close($medStmt);
 
 // --- Recent history (last 20 taken/missed doses) -----------------------------
+// Includes overdue 'upcoming' doses (displayed as Missed, same rule as the
+// calendar and schedule/home pages) so this list matches what the calendar
+// dots show for the current month.
 $history = [];
 $histStmt = mysqli_prepare($con, "
-    SELECT m.name, m.dosage, dl.scheduled_for, dl.status
+    SELECT m.name, m.dosage, dl.scheduled_for,
+        CASE WHEN dl.status = 'upcoming' AND dl.scheduled_for < NOW() THEN 'missed' ELSE dl.status END AS status
     FROM dose_logs dl
     JOIN medicine_schedules ms ON ms.id = dl.schedule_id
     JOIN medicines m ON m.id = ms.medicine_id
-    WHERE m.user_id = ? AND dl.status IN ('taken', 'missed')
+    WHERE m.user_id = ? AND (dl.status IN ('taken', 'missed') OR (dl.status = 'upcoming' AND dl.scheduled_for < NOW()))
     ORDER BY dl.scheduled_for DESC
     LIMIT 20
 ");
@@ -104,6 +150,17 @@ $monthParam = $_GET['month'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $monthParam)) {
     $monthParam = date('Y-m');
 }
+
+// Which view (table/calendar) should render active on page load. Defaults to
+// 'table', but is preserved across month navigation (which is a full page
+// reload via the prev/next <a> links below) by round-tripping it through the
+// URL. See CHANGELOG-worthy bugfix: previously this always reset to 'table'
+// after changing months because nothing carried the JS-only toggle state
+// across a server round trip.
+$viewParam = $_GET['view'] ?? 'table';
+if (!in_array($viewParam, ['table', 'calendar'], true)) {
+    $viewParam = 'table';
+}
 $monthStart = $monthParam . '-01';
 $monthLabel = date('F Y', strtotime($monthStart));
 $prevMonth = date('Y-m', strtotime($monthStart . ' -1 month'));
@@ -111,18 +168,24 @@ $nextMonth = date('Y-m', strtotime($monthStart . ' +1 month'));
 
 $calendarDays = []; // 'YYYY-MM-DD' => ['taken' => n, 'missed' => n, 'upcoming' => n]
 $calStmt = mysqli_prepare($con, "
-    SELECT DATE(dl.scheduled_for) AS day, dl.status, COUNT(*) AS c
+    SELECT
+        DATE(dl.scheduled_for) AS day,
+        -- Same overdue-as-missed display rule as schedule.php/home.php:
+        -- an 'upcoming' dose whose time has passed counts as missed here
+        -- without changing the stored status.
+        CASE WHEN dl.status = 'upcoming' AND dl.scheduled_for < NOW() THEN 'missed' ELSE dl.status END AS effective_status,
+        COUNT(*) AS c
     FROM dose_logs dl
     JOIN medicine_schedules ms ON ms.id = dl.schedule_id
     JOIN medicines m ON m.id = ms.medicine_id
     WHERE m.user_id = ? AND DATE(dl.scheduled_for) BETWEEN ? AND LAST_DAY(?)
-    GROUP BY DATE(dl.scheduled_for), dl.status
+    GROUP BY DATE(dl.scheduled_for), effective_status
 ");
 mysqli_stmt_bind_param($calStmt, 'iss', $userId, $monthStart, $monthStart);
 mysqli_stmt_execute($calStmt);
 $calResult = mysqli_stmt_get_result($calStmt);
 while ($row = mysqli_fetch_assoc($calResult)) {
-    $calendarDays[$row['day']][$row['status']] = (int) $row['c'];
+    $calendarDays[$row['day']][$row['effective_status']] = (int) $row['c'];
 }
 mysqli_stmt_close($calStmt);
 
@@ -143,6 +206,7 @@ $todayStr = date('Y-m-d');
     <link rel="stylesheet" href="../../shared/base.css">
     <link rel="stylesheet" href="../../shared/components.css">
     <link rel="stylesheet" href="../../shared/modal/modal.css">
+    <link rel="stylesheet" href="../../shared/notifications/notifications.css">
     <link rel="stylesheet" href="reports.css">
 
     <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
@@ -150,6 +214,11 @@ $todayStr = date('Y-m-d');
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- No-build charting library, loaded the same way Phosphor Icons is
+         (README §1: no bundler/build step). Used only for the trend chart
+         below -- everything else on this page is still plain PHP/CSS/JS. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
@@ -210,8 +279,26 @@ $todayStr = date('Y-m-d');
 
                     <div class="mr-divider"></div>
 
-                    <!-- Per-medicine breakdown -->
+                    <!-- Trend chart: daily taken/missed over the last 30 days -->
                     <div class="mr-card-heading-row" data-mr-scroll-entry style="--index: 4">
+                        <div class="mr-card-heading">Trend &mdash; last 30 days</div>
+                    </div>
+
+                    <?php if ($total === 0): ?>
+                        <div class="mr-schedule-empty" data-mr-scroll-entry style="--index: 4">
+                            <i class="ph ph-chart-bar"></i>
+                            <p>No dose history yet to chart.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="mr-chart-wrap" data-mr-scroll-entry style="--index: 4">
+                            <canvas id="mr-trend-chart" height="90" aria-label="Daily taken vs. missed doses, and adherence rate, over the last 30 days" role="img"></canvas>
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="mr-divider"></div>
+
+                    <!-- Per-medicine breakdown -->
+                    <div class="mr-card-heading-row" data-mr-scroll-entry style="--index: 5">
                         <div class="mr-card-heading">By medicine</div>
                     </div>
 
@@ -242,12 +329,12 @@ $todayStr = date('Y-m-d');
                     <div class="mr-card-heading-row" data-mr-scroll-entry style="--index: 6">
                         <div class="mr-card-heading">Recent history</div>
                         <div class="mr-view-toggle">
-                            <button type="button" class="mr-view-toggle-btn is-active" data-mr-view-btn="table">Table</button>
-                            <button type="button" class="mr-view-toggle-btn" data-mr-view-btn="calendar">Calendar</button>
+                            <button type="button" class="mr-view-toggle-btn<?= $viewParam === 'table' ? ' is-active' : '' ?>" data-mr-view-btn="table">Table</button>
+                            <button type="button" class="mr-view-toggle-btn<?= $viewParam === 'calendar' ? ' is-active' : '' ?>" data-mr-view-btn="calendar">Calendar</button>
                         </div>
                     </div>
 
-                    <div data-mr-view-panel="table">
+                    <div data-mr-view-panel="table"<?= $viewParam !== 'table' ? ' hidden' : '' ?>>
                     <?php if (empty($history)): ?>
                         <div class="mr-schedule-empty" data-mr-scroll-entry style="--index: 7">
                             <i class="ph ph-clock-counter-clockwise"></i>
@@ -277,11 +364,11 @@ $todayStr = date('Y-m-d');
                     <?php endif; ?>
                     </div>
 
-                    <div data-mr-view-panel="calendar" hidden>
+                    <div data-mr-view-panel="calendar"<?= $viewParam !== 'calendar' ? ' hidden' : '' ?>>
                         <div class="mr-calendar-nav">
-                            <a href="reports.php?month=<?= $prevMonth ?>" class="mr-icon-btn" title="Previous month"><i class="ph ph-caret-left"></i></a>
+                            <a href="reports.php?month=<?= $prevMonth ?>&view=calendar" class="mr-icon-btn" title="Previous month"><i class="ph ph-caret-left"></i></a>
                             <span class="mr-calendar-month-label"><?= htmlspecialchars($monthLabel) ?></span>
-                            <a href="reports.php?month=<?= $nextMonth ?>" class="mr-icon-btn" title="Next month"><i class="ph ph-caret-right"></i></a>
+                            <a href="reports.php?month=<?= $nextMonth ?>&view=calendar" class="mr-icon-btn" title="Next month"><i class="ph ph-caret-right"></i></a>
                         </div>
 
                         <div class="mr-calendar-grid">
@@ -326,7 +413,19 @@ $todayStr = date('Y-m-d');
         </div>
     </div>
 
+    <?php if ($total > 0): ?>
+    <script type="application/json" id="mr-trend-data">
+        <?= json_encode([
+            'labels'  => $trendLabels,
+            'taken'   => $trendTaken,
+            'missed'  => $trendMissed,
+            'rate'    => $trendRate,
+        ]) ?>
+    </script>
+    <?php endif; ?>
+
     <script src="../../shared/modal/modal.js"></script>
+    <script src="../../shared/notifications/notifications.js"></script>
     <script src="reports.js"></script>
 </body>
 

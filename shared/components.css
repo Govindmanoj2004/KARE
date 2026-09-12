@@ -498,6 +498,7 @@
   font-family: inherit;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   transition:
     background-color var(--ease),
@@ -758,3 +759,142 @@
     width: 240px;
   }
 }
+
+/* =========================================================================
+   STAT CARDS
+   Used by every dashboard-style page (patient/doctor/admin home, and the
+   patient's reports.php adherence summary) — moved here from
+   pages/user/home.css so it's shared instead of only working on one page.
+   ========================================================================= */
+
+.mr-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.mr-stat-card {
+  background: var(--layout-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: 20px;
+}
+
+.mr-stat-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.mr-stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+
+.mr-stat-value {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.mr-stat-label {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+@media (max-width: 640px) {
+  .mr-stat-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .mr-stat-card {
+    padding: 16px;
+  }
+}
+
+/* =========================================================================
+   PAGE LAYOUT SHELL — header + main content card
+   Duplicated (identically, in most cases) across nearly every page's own
+   CSS file rather than shared — moved here as the canonical definition
+   for any *new* page going forward (existing per-page copies are left as
+   they are; they simply redeclare the same values and are harmless).
+   ========================================================================= */
+
+.mr-layout-header {
+  position: relative;
+  overflow: hidden;
+  padding: 40px 40px 120px;
+}
+
+.mr-layout-header::before {
+  content: "";
+  position: absolute;
+  bottom: -420vw;
+  left: 50%;
+  translate: -50% 0;
+  width: 500vw;
+  height: 500vw;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.16;
+}
+
+.mr-layout-header-row {
+  position: relative;
+  z-index: 1;
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+.mr-layout-header-heading {
+  font-size: var(--text-xl);
+  font-weight: 400;
+}
+
+.mr-layout-header-heading strong {
+  font-weight: 600;
+}
+
+.mr-layout-header-sub {
+  font-size: var(--text-base);
+  color: rgb(51 46 46 / 65%);
+  margin-top: 6px;
+}
+
+.mr-layout-card {
+  position: relative;
+  z-index: 2;
+  max-width: var(--content-max);
+  margin: -100px auto 40px;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: 32px;
+  box-shadow: var(--shadow-card);
+}
+
+.mr-schedule-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: rgb(51 46 46 / 55%);
+  text-align: center;
+}
+
+.mr-schedule-empty i {
+  font-size: 32px;
+  color: var(--accent);
+  opacity: 0.6;
+}
+
+

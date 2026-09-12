@@ -16,6 +16,7 @@
  */
 session_start();
 require_once __DIR__ . '/../../../assets/connection/Connection.php';
+require_once __DIR__ . '/../../../assets/helpers/notifications.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: ../../../auth/login/index.php');
@@ -36,7 +37,7 @@ function back_with_toast(string $type, array $messages): void
     exit;
 }
 
-$action = $_POST['action'] ?? '';
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
 
 // =============================================================================
 // ACTION: request_connection
@@ -80,6 +81,14 @@ if ($action === 'request_connection') {
 
     if (mysqli_stmt_execute($insertStmt)) {
         mysqli_stmt_close($insertStmt);
+        $patientName = $_SESSION['name'] ?? 'A patient';
+        create_notification(
+            $con,
+            $doctorId,
+            'connection_request',
+            $patientName . ' sent you a connection request.',
+            'pages/doctor/requests/requests.php'
+        );
         back_with_toast('success', ['Connection request sent.']);
     } else {
         mysqli_stmt_close($insertStmt);

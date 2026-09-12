@@ -102,6 +102,7 @@ unset($_SESSION['schedule_old']);
     <link rel="stylesheet" href="../../../shared/base.css">
     <link rel="stylesheet" href="../../../shared/components.css">
     <link rel="stylesheet" href="../../../shared/modal/modal.css">
+    <link rel="stylesheet" href="../../../shared/notifications/notifications.css">
     <link rel="stylesheet" href="../../../shared/toast/toast.css">
     <link rel="stylesheet" href="schedule.css">
 
@@ -162,7 +163,15 @@ unset($_SESSION['schedule_old']);
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($todaysDoses as $dose): $s = $statusLabels[$dose['status']]; ?>
+                                    <?php foreach ($todaysDoses as $dose):
+                                        // A dose still marked 'upcoming' but whose time has already
+                                        // passed displays as "Missed" (to-do #6) — this is a display-only
+                                        // computed status; the stored value stays 'upcoming' until the
+                                        // patient/doctor explicitly acts on it (see README §3.4 on why
+                                        // there's no automated status change, only automated display).
+                                        $isOverdue = $dose['status'] === 'upcoming' && strtotime($dose['scheduled_for']) < time();
+                                        $s = $isOverdue ? $statusLabels['missed'] : $statusLabels[$dose['status']];
+                                    ?>
                                         <tr>
                                             <td><?= htmlspecialchars($dose['name'] . ($dose['dosage'] ? ' ' . $dose['dosage'] : '')) ?></td>
                                             <td><?= htmlspecialchars(date('g:i A', strtotime($dose['scheduled_for']))) ?></td>
@@ -246,12 +255,8 @@ unset($_SESSION['schedule_old']);
                         <div class="mr-field is-full">
                             <label class="mr-label">Reminder times</label>
                             <div class="mr-time-list" data-mr-time-list>
-                                <div class="mr-time-row">
-                                    <input class="mr-input" type="time" name="times[]" required>
-                                    <button type="button" class="mr-icon-btn" data-mr-remove-time title="Remove time">
-                                        <i class="ph ph-x"></i>
-                                    </button>
-                                </div>
+                                <!-- Populated by schedule.js (makeTimeRow) so there's one
+                                     source of truth for the hour/minute/AM-PM picker markup. -->
                             </div>
                             <button type="button" class="mr-btn-secondary mr-add-time-btn" data-mr-add-time>
                                 <i class="ph ph-plus"></i> Add another time
@@ -334,6 +339,7 @@ unset($_SESSION['schedule_old']);
 
     <script src="../../../shared/toast/toast.js"></script>
     <script src="../../../shared/modal/modal.js"></script>
+    <script src="../../../shared/notifications/notifications.js"></script>
     <script src="schedule.js"></script>
 </body>
 

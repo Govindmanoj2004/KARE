@@ -206,6 +206,48 @@
   max-width: 200px;
 }
 
+.mr-time-select-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mr-time-select {
+  max-width: none;
+  width: auto;
+  height: 44px;
+  padding: 0 10px;
+  text-align: center;
+  cursor: pointer;
+  appearance: auto;
+  -webkit-appearance: auto;
+}
+
+.mr-time-select[data-mr-time-hour],
+.mr-time-select[data-mr-time-minute] {
+  min-width: 64px;
+}
+
+.mr-time-ampm {
+  min-width: 72px;
+}
+
+.mr-time-colon {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+@media (max-width: 480px) {
+  .mr-time-select-group {
+    gap: 4px;
+  }
+
+  .mr-time-select {
+    min-width: 52px !important;
+    padding: 0 6px;
+  }
+}
+
 .mr-add-time-btn {
   align-self: flex-start;
   height: 38px;

@@ -37,7 +37,7 @@ function back_with_toast(string $type, array $messages, array $old = []): void
     exit;
 }
 
-$action = $_POST['action'] ?? '';
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
 
 // =============================================================================
 // ACTION: update_profile

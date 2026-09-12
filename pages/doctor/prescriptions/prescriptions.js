@@ -1,9 +1,10 @@
 /**
- * Kare schedule page behaviour.
+ * Kare doctor prescriptions page behaviour.
  * Handles: avatar popover, mobile sidebar toggle, scroll-entry animations
- * (same shell boilerplate as report.js), plus this page's own bits:
- *   - adding/removing reminder-time rows in the medicine form
- *   - "Edit" pre-filling the form to update an existing medicine
+ * (same shell boilerplate as every other doctor page), plus this page's
+ * own bit: the fulfill-request dialog (upload a new prescription for a
+ * specific pending request), same overlay pattern as
+ * pages/user/doctors/doctors.js's connect-request dialog.
  */
 document.addEventListener("DOMContentLoaded", function () {
   // ===================================================================
@@ -96,48 +97,35 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ===================================================================
-  // "Upload update" on an incoming doctor ask: ties the upload form to
-  // that specific request via the hidden fulfill_request_id field.
+  // Fulfill-request dialog
   // ===================================================================
 
-  var uploadForm = document.querySelector("[data-mr-upload-form]");
-  var fulfillAskIdInput = document.querySelector("[data-mr-fulfill-ask-id]");
-  var uploadHint = document.querySelector("[data-mr-upload-hint]");
+  var overlay = document.querySelector("[data-mr-fulfill-overlay]");
+  if (!overlay) return;
 
-  document.querySelectorAll("[data-mr-fulfill-ask-btn]").forEach(function (btn) {
+  var requestIdInput = overlay.querySelector("[data-mr-fulfill-request-id]");
+  var patientNameEl = overlay.querySelector("[data-mr-fulfill-patient-name]");
+  var cancelBtn = overlay.querySelector("[data-mr-fulfill-cancel]");
+
+  document.querySelectorAll("[data-mr-fulfill-btn]").forEach(function (btn) {
     btn.addEventListener("click", function () {
-      if (fulfillAskIdInput) fulfillAskIdInput.value = btn.dataset.requestId;
-      if (uploadHint) uploadHint.textContent = "PDF, JPG, or PNG — 2MB max. This will fulfill your doctor's request.";
-      if (uploadForm) uploadForm.scrollIntoView({ behavior: "smooth", block: "center" });
+      requestIdInput.value = btn.dataset.requestId;
+      patientNameEl.textContent = btn.dataset.patientName;
+      overlay.classList.add("is-open");
+      overlay.setAttribute("aria-hidden", "false");
     });
   });
 
-  // ===================================================================
-  // Request-update dialog
-  // ===================================================================
-
-  var requestOverlay = document.querySelector("[data-mr-request-update-overlay]");
-  var requestBtn = document.querySelector("[data-mr-request-update-btn]");
-  var requestCancelBtn = document.querySelector("[data-mr-request-update-cancel]");
-
-  if (requestOverlay && requestBtn) {
-    requestBtn.addEventListener("click", function () {
-      requestOverlay.classList.add("is-open");
-      requestOverlay.setAttribute("aria-hidden", "false");
-    });
-
-    function closeRequestOverlay() {
-      requestOverlay.classList.remove("is-open");
-      requestOverlay.setAttribute("aria-hidden", "true");
-    }
-
-    requestCancelBtn.addEventListener("click", closeRequestOverlay);
-    requestOverlay.addEventListener("click", function (e) {
-      if (e.target === requestOverlay) closeRequestOverlay();
-    });
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && requestOverlay.classList.contains("is-open")) closeRequestOverlay();
-    });
+  function closeOverlay() {
+    overlay.classList.remove("is-open");
+    overlay.setAttribute("aria-hidden", "true");
   }
 
+  cancelBtn.addEventListener("click", closeOverlay);
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay) closeOverlay();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && overlay.classList.contains("is-open")) closeOverlay();
+  });
 });

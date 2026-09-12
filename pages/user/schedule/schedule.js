@@ -98,20 +98,91 @@ document.addEventListener("DOMContentLoaded", function () {
   // ===================================================================
   // Reminder-time rows: add / remove
   // ===================================================================
+  // Redesigned (to-do #11): the confusing native <input type="time"> —
+  // whose tiny HH/MM/AM-PM segments are fiddly to click, especially on
+  // mobile — is replaced with three plain <select> dropdowns (hour,
+  // 5-minute steps, AM/PM). A hidden input still carries the same
+  // "HH:MM" 24-hour value the controller already expects, so no backend
+  // change is needed.
 
   var timeList = document.querySelector("[data-mr-time-list]");
   var addTimeBtn = document.querySelector("[data-mr-add-time]");
 
+  function pad2(n) {
+    return n < 10 ? "0" + n : "" + n;
+  }
+
+  // "08:00" (24h, as stored/submitted) -> { hour12: 8, minute: "00", ampm: "AM" }
+  function timeToParts(value) {
+    var bits = (value || "08:00").split(":");
+    var h24 = parseInt(bits[0], 10);
+    if (isNaN(h24)) h24 = 8;
+    var minNum = parseInt(bits[1], 10);
+    if (isNaN(minNum)) minNum = 0;
+    minNum = Math.round(minNum / 5) * 5; // snap to the nearest 5-minute option
+    if (minNum === 60) minNum = 0;
+    var ampm = h24 >= 12 ? "PM" : "AM";
+    var h12 = h24 % 12;
+    if (h12 === 0) h12 = 12;
+    return { hour12: h12, minute: pad2(minNum), ampm: ampm };
+  }
+
+  // (8, "00", "PM") -> "20:00"
+  function partsTo24h(hour12, minute, ampm) {
+    var h = parseInt(hour12, 10) % 12;
+    if (ampm === "PM") h += 12;
+    return pad2(h) + ":" + minute;
+  }
+
   function makeTimeRow(value) {
+    var parts = timeToParts(value);
     var row = document.createElement("div");
     row.className = "mr-time-row";
-    row.innerHTML =
-      '<input class="mr-input" type="time" name="times[]" required>' +
-      '<button type="button" class="mr-icon-btn" data-mr-remove-time title="Remove time"><i class="ph ph-x"></i></button>';
-    if (value) {
-      row.querySelector("input").value = value;
+
+    var hourOptions = "";
+    for (var h = 1; h <= 12; h++) {
+      hourOptions += '<option value="' + h + '"' + (h === parts.hour12 ? " selected" : "") + ">" + h + "</option>";
     }
+    var minuteOptions = "";
+    for (var m = 0; m < 60; m += 5) {
+      var mm = pad2(m);
+      minuteOptions += '<option value="' + mm + '"' + (mm === parts.minute ? " selected" : "") + ">" + mm + "</option>";
+    }
+    var ampmOptions =
+      '<option value="AM"' + (parts.ampm === "AM" ? " selected" : "") + ">AM</option>" +
+      '<option value="PM"' + (parts.ampm === "PM" ? " selected" : "") + ">PM</option>";
+
+    row.innerHTML =
+      '<div class="mr-time-select-group">' +
+      '<select class="mr-input mr-time-select" data-mr-time-hour aria-label="Hour">' + hourOptions + "</select>" +
+      '<span class="mr-time-colon">:</span>' +
+      '<select class="mr-input mr-time-select" data-mr-time-minute aria-label="Minute">' + minuteOptions + "</select>" +
+      '<select class="mr-input mr-time-select mr-time-ampm" data-mr-time-ampm aria-label="AM or PM">' + ampmOptions + "</select>" +
+      "</div>" +
+      '<input type="hidden" name="times[]" data-mr-time-value>' +
+      '<button type="button" class="mr-icon-btn" data-mr-remove-time title="Remove time"><i class="ph ph-x"></i></button>';
+
+    var hourSel = row.querySelector("[data-mr-time-hour]");
+    var minSel = row.querySelector("[data-mr-time-minute]");
+    var ampmSel = row.querySelector("[data-mr-time-ampm]");
+    var hidden = row.querySelector("[data-mr-time-value]");
+
+    function sync() {
+      hidden.value = partsTo24h(hourSel.value, minSel.value, ampmSel.value);
+    }
+    hourSel.addEventListener("change", sync);
+    minSel.addEventListener("change", sync);
+    ampmSel.addEventListener("change", sync);
+    sync();
+
     return row;
+  }
+
+  // The page loads with an empty time-list container (see schedule.php) —
+  // give it its first row here so there's a single source of truth for
+  // this markup instead of duplicating it in PHP too.
+  if (timeList && timeList.children.length === 0) {
+    timeList.appendChild(makeTimeRow());
   }
 
   if (timeList && addTimeBtn) {
@@ -126,7 +197,8 @@ document.addEventListener("DOMContentLoaded", function () {
       if (timeList.querySelectorAll(".mr-time-row").length > 1) {
         removeBtn.closest(".mr-time-row").remove();
       } else {
-        removeBtn.closest(".mr-time-row").querySelector("input").value = "";
+        timeList.innerHTML = "";
+        timeList.appendChild(makeTimeRow());
       }
     });
   }

@@ -76,53 +76,9 @@
   box-shadow: var(--shadow-card);
 }
 
-
-/* =========================================================================
-   STAT CARDS
-   ========================================================================= */
-
-.mr-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 28px;
-}
-
-.mr-stat-card {
-  background: var(--layout-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-panel);
-  padding: 20px;
-}
-
-.mr-stat-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-
-.mr-stat-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--accent-bg);
-  color: var(--accent);
-  display: grid;
-  place-items: center;
-  font-size: 18px;
-}
-
-.mr-stat-value {
-  font-size: 26px;
-  font-weight: 600;
-}
-
-.mr-stat-label {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  margin-top: 2px;
-}
+/* Stat cards (.mr-stat-grid, .mr-stat-card, etc.) now live in
+   shared/components.css so doctor/admin dashboards and reports.php get
+   the same styling instead of only this page. */
 
 
 /* =========================================================================
@@ -218,13 +174,5 @@
     margin: -80px 12px 24px;
     padding: 20px;
   }
-
-  .mr-stat-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
-  .mr-stat-card {
-    padding: 16px;
-  }
 }
+

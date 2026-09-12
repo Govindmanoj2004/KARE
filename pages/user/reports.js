@@ -117,4 +117,85 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     });
   });
+
+  // ===================================================================
+  // Trend chart (README §6 "Not built" -> a real bar/line chart of dose
+  // history). Data is computed server-side in reports.php and handed
+  // off via the #mr-trend-data JSON script tag; Chart.js itself is
+  // loaded via CDN <script> in reports.php's <head>, same no-build
+  // pattern as Phosphor Icons.
+  // ===================================================================
+
+  var trendDataEl = document.getElementById("mr-trend-data");
+  var trendCanvas = document.getElementById("mr-trend-chart");
+
+  if (trendDataEl && trendCanvas && window.Chart) {
+    var trend = JSON.parse(trendDataEl.textContent);
+
+    new Chart(trendCanvas.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: trend.labels,
+        datasets: [
+          {
+            type: "bar",
+            label: "Taken",
+            data: trend.taken,
+            backgroundColor: "#1f9d55",
+            stack: "doses",
+            borderRadius: 4,
+            yAxisID: "yCount",
+          },
+          {
+            type: "bar",
+            label: "Missed",
+            data: trend.missed,
+            backgroundColor: "#e0433f",
+            stack: "doses",
+            borderRadius: 4,
+            yAxisID: "yCount",
+          },
+          {
+            type: "line",
+            label: "Adherence rate",
+            data: trend.rate,
+            borderColor: "#55acee",
+            backgroundColor: "#55acee",
+            spanGaps: true,
+            tension: 0.3,
+            pointRadius: 2,
+            yAxisID: "yRate",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 },
+            grid: { display: false },
+          },
+          yCount: {
+            stacked: true,
+            beginAtZero: true,
+            position: "left",
+            ticks: { precision: 0 },
+            title: { display: true, text: "Doses" },
+          },
+          yRate: {
+            beginAtZero: true,
+            max: 100,
+            position: "right",
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: "Adherence %" },
+          },
+        },
+        plugins: {
+          legend: { position: "bottom" },
+        },
+      },
+    });
+  }
 });

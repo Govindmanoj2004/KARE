@@ -76,6 +76,40 @@ body {
   margin-bottom: 12px;
 }
 
+.signup-9-role-toggle {
+  display: flex;
+  gap: 4px;
+  background: #efefef;
+  border-radius: 14px;
+  padding: 4px;
+  margin-bottom: 6px;
+}
+
+.signup-9-role-btn {
+  flex: 1;
+  height: 40px !important;
+  border: 0;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: #6b6b6b;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.signup-9-role-btn.is-active {
+  background: #ffffff !important;
+  color: #226699;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 10%);
+}
+
+.signup-9-role-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgb(85 172 238 / 25%);
+}
+
 .signup-9 :is(button, input) {
   height: 52px;
   border-radius: 14px;

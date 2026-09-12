@@ -1,0 +1,50 @@
+/* =========================================================================
+   Doctor Prescriptions — request cards
+   ========================================================================= */
+
+.mr-presc-request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.mr-presc-request-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+}
+
+.mr-presc-request-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.mr-presc-request-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.mr-presc-request-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .mr-presc-request-card {
+    flex-direction: column;
+  }
+
+  .mr-presc-request-side {
+    align-items: flex-start;
+    width: 100%;
+  }
+}
